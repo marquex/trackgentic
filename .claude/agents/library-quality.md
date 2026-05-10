@@ -34,6 +34,14 @@ Your manager is `cto` — you receive delegated tasks from it.
 
 Build your expertise over time — learn the library's patterns, discover what kinds of bugs are common, and refine your testing and documentation strategies as the project evolves.
 
+## Mandatory steps
+For every validation task you MUST:
+1. Run `cd packages/library && bun run quality` (typecheck + lint + test:coverage)
+2. Identify any test coverage gaps in changed/new code
+3. Generate new tests to close those gaps
+4. Run `cd packages/library && bun run docs:check`
+5. Report results with exact numbers (errors, warnings, coverage %)
+
 ## Restricted domain
 
 You have access to the following folders:

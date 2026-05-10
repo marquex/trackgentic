@@ -9,7 +9,7 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 1 complete. Quality plan fully implemented: Biome linting (zero errors), TypeScript strict+4 extra flags (zero errors), Bun tests (18 pass, 433 assertions, 88.91% coverage), TypeDoc (parses cleanly). Test helpers and directory structure created. All quality gates passing. Ready to delegate Phase 2."
+expertise_status: "Phase 1 complete. Agent handoff workflow enforced via system prompts: library-developer self-checks typecheck+lint+test, library-quality runs full quality gate + generates missing tests + docs:check. No need to repeat these in delegation messages. All quality gates passing (18 tests, 433 assertions, 88.91% coverage). Ready to delegate Phase 2."
 
 project_overview:
   name: trackgentic
@@ -42,6 +42,17 @@ specifications:
       description: 7 phases from foundation to polish, with tasks, tests, and exit criteria per phase
     - path: 06-quality-plan.md
       description: Linting (Biome), typechecking (strict+), testing (Bun), test organization, code review checklist, documentation (TypeDoc), quality gates
+
+delegation_workflow:
+  mandatory_sequence: |
+    After every library-developer delegation that makes code changes, you MUST delegate to library-quality for validation.
+    Sequence: library-developer (implement) → library-quality (validate).
+    Never skip the quality validation step. This ensures code is clean, tested, and documented.
+  note: "Self-check and validation steps are enforced via agent system prompts. No need to duplicate in delegation messages."
+  library-developer:
+    focus: "Focus delegation messages on the implementation task itself. The agent self-checks typecheck+lint+test before completion."
+  library-quality:
+    focus: "Focus delegation messages on what changed and needs validation. The agent runs the full quality gate, generates missing tests, and checks docs automatically."
 
 docs_absorbed:
   - docs/introduction.md — project vision, file structure, issue properties, CLI overview, config
@@ -87,3 +98,15 @@ session_log:
   - session: 12
     date: "2026-05-10"
     summary: "library-quality completed quality plan implementation. All gates pass: typecheck (zero errors with 4 extra strict flags), lint (zero errors after Biome auto-fixes for import ordering, template literals, null checks), tests (18 pass, 433 assertions, 88.91% coverage), docs:check (TypeDoc parses cleanly). Verified with bun run quality. Ready for Phase 2."
+  - session: 13
+    date: "2026-05-10"
+    summary: "Designed agent handoff workflow. Proposed: library-developer runs typecheck+lint before completing tasks (self-check), library-quality runs full quality gate + generates missing tests. Recommended creating 07-workflow.md spec, adding delegation template to CTO expertise, and updating agent system prompts with mandatory pre-completion steps. User asked to also update CTO expertise with this knowledge."
+  - session: 14
+    date: "2026-05-10"
+    summary: "User confirmed they updated agent system prompts (library-developer.md and library-quality.md) with mandatory pre-completion steps. All three layers of the handoff workflow are now in place: (1) agent system prompts with mandatory self-checks, (2) CTO delegation templates in expertise, (3) user-confirmed prompt changes. Ready to proceed with Phase 2 delegation."
+  - session: 15
+    date: "2026-05-10"
+    summary: "User clarified: self-check steps are now in agent system prompts, so no need to duplicate them in delegation messages. Simplified delegation_templates to a note that system prompts handle enforcement, with focus on task content only. Updated expertise_status accordingly."
+  - session: 16
+    date: "2026-05-10"
+    summary: "User emphasized: always delegate to library-quality after every library-developer code change. Added mandatory_sequence to delegation_workflow in expertise: developer (implement) → quality (validate). Never skip the quality step. Renamed delegation_templates to delegation_workflow for clarity."

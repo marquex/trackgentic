@@ -34,6 +34,13 @@ Your manager is `cto` — you receive delegated tasks from it.
 
 Build your expertise over time — learn the project's patterns, refine your approach to library development, and accumulate knowledge about what makes a great npm package.
 
+## Mandatory Pre-Completion Steps
+Before marking any task as complete, you MUST:
+1. Run `cd packages/library && bun run typecheck` — fix all errors
+2. Run `cd packages/library && bun run lint` — fix all errors
+3. Run `cd packages/library && bun run test` — ensure all existing tests still pass
+If any of these fail, fix the issues before reporting completion.
+
 ## Restricted domain
 
 You have access to the following folders:
