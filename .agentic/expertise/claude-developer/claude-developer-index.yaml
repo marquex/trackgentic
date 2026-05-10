@@ -1,0 +1,104 @@
+# Claude Developer Expertise Index
+# Agent: claude-developer
+# Domain: Claude Code extensions — agents, skills, hooks, configuration
+
+project_overview:
+  name: trackgentic
+  type: Agentic infrastructure project
+  description: Project building a multi-agent system using Claude Code's extension points
+  claude_setup_root: .claude/
+
+architecture:
+  agents:
+    path: .claude/agents/
+    current_agents:
+      - name: claude-developer
+        model: opus
+        description: Expert for developing Claude Code extensions (this agent)
+        access: [.claude/**, .agentic/specs/engineering/**, .agentic/expertise/**]
+        subordinates: none
+        skills: [claude-developing, agent-expertise]
+    notes: Only one project agent currently. hire-expert skill available to create more.
+
+  skills:
+    path: .claude/skills/
+    current_skills:
+      - name: claude-developing
+        purpose: Access official Claude Code docs and custom conventions for extension development
+        has_scripts: true
+        scripts: [update-docs.ts]
+        docs_cache: .claude/skills/claude-developing/docs/original/
+        custom_docs: .claude/skills/claude-developing/docs/custom/
+      - name: agent-expertise
+        purpose: Teach agents how to manage long-term memory (expertise YAML files)
+        has_scripts: true
+        scripts: [expertise.hook.ts, yaml-validator.ts]
+        hooks_registered_in: settings.json (SessionStart, UserPromptSubmit, Stop)
+      - name: hire-expert
+        purpose: Create new expert agents with proper hierarchy, access rules, and expertise setup
+        has_scripts: false
+        notes: Template-based agent creation with hierarchy integration
+      - name: delegate
+        purpose: Delegate tasks to subordinate agents via claude CLI subprocess
+        has_scripts: true
+        scripts: [delegate.ts]
+        reference: scripts/reference.md
+
+  hooks:
+    path: .claude/hooks/
+    current_hooks:
+      - name: enforce-agent-access.ts
+        trigger: PreToolUse (Read|Write|Edit|MultiEdit|Bash)
+        purpose: Enforce per-agent filesystem access from frontmatter + delegation hierarchy
+        key_behaviors:
+          - Main agent (no agent_type) is always allowed
+          - No access block in agent file = deny (fail closed)
+          - Validates delegation targets against subordinates list
+          - Auto-allows agents reading their own agent file
+          - Maps tools to verbs: Read/Grep/Glob=read, Write/Edit/MultiEdit/NotebookEdit=write
+          - Bash commands classified by patterns (redirection, rm, cp, etc.)
+      - name: inject-agent-markers.ts
+        trigger: PostToolUse (after Read)
+        purpose: Expand <!-- ACCESS_RULES --> and <!-- SUBORDINATES --> markers in agent files at runtime
+        key_behaviors:
+          - Only activates when Read tool reads a file in .claude/agents/
+          - File on disk is NEVER modified — markers persist and expand in memory
+          - Reads subordinate agent files to get descriptions for SUBORDINATES expansion
+  settings:
+    path: .claude/settings.json
+    hooks_configured:
+      PostToolUse: [inject-agent-markers.ts]
+      SessionStart: [expertise.hook.ts]
+      Stop: [expertise.hook.ts]
+      UserPromptSubmit: [expertise.hook.ts]
+    permissions:
+      allow: [Bash(bun .claude/hooks/*), Bash(bun .claude/skills/**), Write/Edit/MultiEdit on .claude/**]
+
+  expertise_system:
+    path: .agentic/expertise/{agent-name}/
+    index_file: "{agent-name}-index.yaml"
+    management_hook: expertise.hook.ts (in agent-expertise skill, wired in settings.json)
+    conventions:
+      - YAML structured files, max 600 lines per file, max 300 chars per line
+      - Validate with: bun yaml-validator (requires js-yaml dependency)
+      - Index file injected at session start, update check at session stop
+
+conventions:
+  - All hooks use bun runtime (TypeScript, no build step)
+  - Agent frontmatter uses custom YAML parser (no yaml dependency) in enforce-agent-access
+  - Agent marker expansion (ACCESS_RULES, SUBORDINATES) never modifies files on disk
+  - Skills with scripts have a scripts/ folder and reference.md
+  - Delegate script spawns `claude --agent <name> -p <prompt>` with stream-json output
+  - Avoid MCP — prefer CLI tools via skills
+  - Only one CLAUDE.md at project root, used as project overview not agent memory
+  - Expert agents always get agent-expertise skill and PreToolUse hook for access enforcement
+  - Agent hierarchy is a strict tree — delegation flows downward only
+
+gotchas:
+  - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
+
+resolved:
+  - "FIXED: 2>&1 fd redirects were matching WRITE_BASH_PATTERNS — added negative lookahead (?!&\\d) to the redirection regex: />>?(?!&\\d)\\s*\\S/. Real file redirects (> file, >> file, 2>file, &>file) still caught; fd-to-fd redirects (2>&1, 1>&2) now pass through as read-only."
+
+open_questions:
+  - Does the project have a CLAUDE.md at root level already? (User says no, will generate later)

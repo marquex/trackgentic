@@ -1,0 +1,53 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "bun .claude/hooks/inject-agent-markers.ts",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bun .claude/skills/agent-expertise/expertise.hook.ts",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "bun .claude/skills/agent-expertise/expertise.hook.ts",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "bun .claude/skills/agent-expertise/expertise.hook.ts",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bun .claude/hooks/*)",
+      "Bash(bun .claude/skills/**)",
+      "Write(.claude/**)",
+      "Edit(.claude/**)",
+      "MultiEdit(.claude/**)"
+    ]
+  }
+}
