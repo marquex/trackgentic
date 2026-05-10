@@ -20,9 +20,7 @@ const strictConfig: ConfigFile = {
 };
 
 const usersWithAlice: UsersFile = {
-  users: [
-    { name: "alice", token: "tk_abc12345", registeredAt: "2024-01-01T00:00:00.000Z" },
-  ],
+  users: [{ name: "alice", token: "tk_abc12345", registeredAt: "2024-01-01T00:00:00.000Z" }],
 };
 
 const emptyUsers: UsersFile = {

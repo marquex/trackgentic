@@ -1,4 +1,10 @@
 import { Command } from "commander";
+import {
+  commentsAddAction,
+  commentsDeleteAction,
+  commentsListAction,
+  commentsUpdateAction,
+} from "./commands/comments";
 import { createAction } from "./commands/create";
 import { historyAction } from "./commands/history";
 import { initAction } from "./commands/init";
@@ -79,6 +85,31 @@ export function createProgram(): Command {
     .command("history <issueId>")
     .description("View an issue's raw event history")
     .action(historyAction);
+
+  // ─── comments ─────────────────────────────────────────────────────
+  const commentsCmd = program.command("comments").description("Manage comments on issues");
+
+  commentsCmd
+    .command("add <issueId>")
+    .description("Add a comment to an issue")
+    .requiredOption("--content <content>", "Comment content")
+    .action(commentsAddAction);
+
+  commentsCmd
+    .command("update <issueId> <commentId>")
+    .description("Update an existing comment")
+    .requiredOption("--content <content>", "New comment content")
+    .action(commentsUpdateAction);
+
+  commentsCmd
+    .command("delete <issueId> <commentId>")
+    .description("Delete a comment")
+    .action(commentsDeleteAction);
+
+  commentsCmd
+    .command("list <issueId>")
+    .description("List comments on an issue")
+    .action(commentsListAction);
 
   // ─── users ────────────────────────────────────────────────────────
   const usersCmd = program.command("users").description("Manage users");

@@ -1,5 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
-import type { ComputedIssue, Event, IssueId, IssueStatus, UpdateEvent } from "../types";
+import type {
+  CommentId,
+  ComputedComment,
+  ComputedIssue,
+  Event,
+  IssueId,
+  IssueStatus,
+  UpdateEvent,
+} from "../types";
 
 /**
  * Append a single event to an issue's JSON file (array of events).
@@ -105,4 +113,43 @@ export function computeState(events: Event[], issueId: IssueId): ComputedIssue {
     createdBy,
     updatedAt,
   };
+}
+
+/**
+ * Replay events to compute the current list of comments.
+ *
+ * - `comment` event → create new entry
+ * - `comment-update` event → update content and editedAt (skip if missing/deleted)
+ * - `comment-delete` event → remove entry from the map
+ * - All other event types are ignored.
+ *
+ * Returns comments sorted by creation timestamp ascending.
+ */
+export function computeComments(events: Event[]): ComputedComment[] {
+  const map = new Map<CommentId, ComputedComment>();
+
+  for (const event of events) {
+    if (event.type === "comment") {
+      map.set(event.content.id, {
+        id: event.content.id,
+        author: event.author,
+        content: event.content.content,
+        timestamp: event.timestamp,
+        editedAt: null,
+      });
+    } else if (event.type === "comment-update") {
+      const existing = map.get(event.content.id);
+      if (existing) {
+        existing.content = event.content.content;
+        existing.editedAt = event.timestamp;
+      }
+    } else if (event.type === "comment-delete") {
+      map.delete(event.content.id);
+    }
+    // All other event types are ignored
+  }
+
+  return Array.from(map.values()).sort((a, b) =>
+    a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0,
+  );
 }

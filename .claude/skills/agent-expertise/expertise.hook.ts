@@ -61,6 +61,10 @@ function handleSessionStart(input: HookInput): void {
     const {agent_type, session_id} = input;
     if (!agent_type || !session_id) process.exit(0);
 
+    // Dedup: if both settings.json and agent frontmatter define this hook,
+    // the second invocation finds the flag already set and skips injection.
+    if (existsSync(flagPath(session_id, agent_type))) process.exit(0);
+
     injectExpertise('SessionStart', agent_type, session_id);
 }
 

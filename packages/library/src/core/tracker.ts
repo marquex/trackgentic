@@ -1,6 +1,13 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type {
+  CommentAddParams,
+  CommentAddResult,
+  CommentDeleteParams,
+  CommentDeleteResult,
+  CommentsListResult,
+  CommentUpdateParams,
+  CommentUpdateResult,
   ConfigFile,
   CreateParams,
   CreateResult,
@@ -26,9 +33,9 @@ import type {
 } from "../types";
 import { resolveAuthor } from "./auth";
 import { ErrorCodes, TrackgenticError } from "./errors";
-import { appendEvent, computeState, replayEvents } from "./events";
+import { appendEvent, computeComments, computeState, replayEvents } from "./events";
 import { atomicWriteJSON, readJSON } from "./file-io";
-import { generateId } from "./id";
+import { generateCommentId, generateId } from "./id";
 import { findEntry, insertEntry, readIndex, updateEntry, writeIndex } from "./index-manager";
 import { resolveTrackerDir } from "./resolution";
 
@@ -436,6 +443,236 @@ export class Tracker {
     }
 
     return replayEvents(issueFilePath);
+  }
+
+  // ─── Comments ─────────────────────────────────────────────────────
+
+  /**
+   * Add a comment to an issue.
+   */
+  async commentsAdd(id: IssueId, params: CommentAddParams): Promise<CommentAddResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
+    const index = await readIndex(trackerDir);
+    const entry = findEntry(index, id);
+    if (!entry) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${id} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    const issueFilePath = join(trackerDir, entry.path);
+    if (!existsSync(issueFilePath)) {
+      throw new TrackgenticError(
+        ErrorCodes.ISSUE_MISSING.result,
+        `Issue file for ${id} is missing.`,
+        ErrorCodes.ISSUE_MISSING.exitCode,
+      );
+    }
+
+    const commentId = generateCommentId();
+    const now = new Date().toISOString();
+
+    const commentEvent = {
+      type: "comment" as const,
+      timestamp: now,
+      author,
+      content: { id: commentId, content: params.content },
+    };
+
+    await appendEvent(issueFilePath, commentEvent);
+
+    return { result: "OK", commentId };
+  }
+
+  /**
+   * Update an existing comment.
+   */
+  async commentsUpdate(
+    id: IssueId,
+    commentId: string,
+    params: CommentUpdateParams,
+  ): Promise<CommentUpdateResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
+    const index = await readIndex(trackerDir);
+    const entry = findEntry(index, id);
+    if (!entry) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${id} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    const issueFilePath = join(trackerDir, entry.path);
+    if (!existsSync(issueFilePath)) {
+      throw new TrackgenticError(
+        ErrorCodes.ISSUE_MISSING.result,
+        `Issue file for ${id} is missing.`,
+        ErrorCodes.ISSUE_MISSING.exitCode,
+      );
+    }
+
+    const events = await replayEvents(issueFilePath);
+    const comments = computeComments(events);
+    if (!comments.find((c) => c.id === commentId)) {
+      throw new TrackgenticError(
+        ErrorCodes.COMMENT_NOT_FOUND.result,
+        `Comment ${commentId} not found.`,
+        ErrorCodes.COMMENT_NOT_FOUND.exitCode,
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    const updateEvent = {
+      type: "comment-update" as const,
+      timestamp: now,
+      author,
+      content: { id: commentId, content: params.content },
+    };
+
+    await appendEvent(issueFilePath, updateEvent);
+
+    return { result: "OK" };
+  }
+
+  /**
+   * Delete a comment from an issue.
+   */
+  async commentsDelete(
+    id: IssueId,
+    commentId: string,
+    params?: CommentDeleteParams,
+  ): Promise<CommentDeleteResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params?.author ?? authResult.author;
+
+    const index = await readIndex(trackerDir);
+    const entry = findEntry(index, id);
+    if (!entry) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${id} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    const issueFilePath = join(trackerDir, entry.path);
+    if (!existsSync(issueFilePath)) {
+      throw new TrackgenticError(
+        ErrorCodes.ISSUE_MISSING.result,
+        `Issue file for ${id} is missing.`,
+        ErrorCodes.ISSUE_MISSING.exitCode,
+      );
+    }
+
+    const events = await replayEvents(issueFilePath);
+    const comments = computeComments(events);
+    if (!comments.find((c) => c.id === commentId)) {
+      throw new TrackgenticError(
+        ErrorCodes.COMMENT_NOT_FOUND.result,
+        `Comment ${commentId} not found.`,
+        ErrorCodes.COMMENT_NOT_FOUND.exitCode,
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    const deleteEvent = {
+      type: "comment-delete" as const,
+      timestamp: now,
+      author,
+      content: { id: commentId },
+    };
+
+    await appendEvent(issueFilePath, deleteEvent);
+
+    return { result: "OK" };
+  }
+
+  /**
+   * List all comments for an issue.
+   */
+  async commentsList(id: IssueId): Promise<CommentsListResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
+    const index = await readIndex(trackerDir);
+    const entry = findEntry(index, id);
+    if (!entry) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${id} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    const issueFilePath = join(trackerDir, entry.path);
+    if (!existsSync(issueFilePath)) {
+      throw new TrackgenticError(
+        ErrorCodes.ISSUE_MISSING.result,
+        `Issue file for ${id} is missing.`,
+        ErrorCodes.ISSUE_MISSING.exitCode,
+      );
+    }
+
+    const events = await replayEvents(issueFilePath);
+    return computeComments(events);
   }
 
   // ─── User Management ──────────────────────────────────────────────

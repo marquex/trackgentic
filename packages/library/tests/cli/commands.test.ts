@@ -439,9 +439,7 @@ describe("CLI commands", () => {
     test("issues new token with own token via env var", async () => {
       await runCLI("init");
 
-      const regOutput = JSON.parse(
-        (await runCLI("users", "register", "alice")).stdout.trim(),
-      );
+      const regOutput = JSON.parse((await runCLI("users", "register", "alice")).stdout.trim());
       const oldToken = regOutput.token;
 
       const { stdout, stderr, exitCode } = await runCLIWithEnv(
@@ -464,9 +462,7 @@ describe("CLI commands", () => {
     test("rejects when different user tries to regenerate", async () => {
       await runCLI("init");
       await runCLI("users", "register", "alice");
-      const bobOutput = JSON.parse(
-        (await runCLI("users", "register", "bob")).stdout.trim(),
-      );
+      const bobOutput = JSON.parse((await runCLI("users", "register", "bob")).stdout.trim());
 
       const { stderr, exitCode } = await runCLIWithEnv(
         { TRACKGENTIC_USER_TOKEN: bobOutput.token },
@@ -479,6 +475,186 @@ describe("CLI commands", () => {
 
       const result = JSON.parse(stderr.trim());
       expect(result.result).toBe("INVALID_TOKEN");
+    });
+  });
+
+  // ─── Comments CLI Tests ─────────────────────────────────────────
+
+  describe("comments add", () => {
+    test("adds a comment and returns OK with commentId", async () => {
+      await runCLI("init");
+      const createResult = JSON.parse((await runCLI("create", "Test Issue")).stdout.trim());
+      const issueId = createResult.id;
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "comments",
+        "add",
+        issueId,
+        "--content",
+        "Hello world",
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+      expect(result.commentId).toHaveLength(10);
+    });
+  });
+
+  describe("comments update", () => {
+    test("updates a comment and returns OK", async () => {
+      await runCLI("init");
+      const createResult = JSON.parse((await runCLI("create", "Test Issue")).stdout.trim());
+      const issueId = createResult.id;
+
+      const addResult = JSON.parse(
+        (await runCLI("comments", "add", issueId, "--content", "Original")).stdout.trim(),
+      );
+      const commentId = addResult.commentId;
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "comments",
+        "update",
+        issueId,
+        commentId,
+        "--content",
+        "Updated",
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+    });
+  });
+
+  describe("comments delete", () => {
+    test("deletes a comment and returns OK", async () => {
+      await runCLI("init");
+      const createResult = JSON.parse((await runCLI("create", "Test Issue")).stdout.trim());
+      const issueId = createResult.id;
+
+      const addResult = JSON.parse(
+        (await runCLI("comments", "add", issueId, "--content", "To delete")).stdout.trim(),
+      );
+      const commentId = addResult.commentId;
+
+      const { stdout, stderr, exitCode } = await runCLI("comments", "delete", issueId, commentId);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+    });
+  });
+
+  describe("comments list", () => {
+    test("returns comment array", async () => {
+      await runCLI("init");
+      const createResult = JSON.parse((await runCLI("create", "Test Issue")).stdout.trim());
+      const issueId = createResult.id;
+
+      await runCLI("comments", "add", issueId, "--content", "First");
+      await runCLI("comments", "add", issueId, "--content", "Second");
+
+      const { stdout, stderr, exitCode } = await runCLI("comments", "list", issueId);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(result[0].content).toBe("First");
+      expect(result[1].content).toBe("Second");
+      // Verify computed comment fields
+      expect(result[0].id).toHaveLength(10);
+      expect(result[0].author).toBe("anonymous");
+      expect(result[0].timestamp).toBeTruthy();
+      expect(result[0].editedAt).toBeNull();
+    });
+  });
+
+  describe("comments error paths", () => {
+    test("comments add on non-existent issue prints NOT_FOUND", async () => {
+      await runCLI("init");
+
+      const { stderr, exitCode } = await runCLI(
+        "comments",
+        "add",
+        "missing12345",
+        "--content",
+        "Hello",
+      );
+
+      expect(exitCode).toBe(5);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("NOT_FOUND");
+    });
+
+    test("comments update on non-existent comment prints COMMENT_NOT_FOUND", async () => {
+      await runCLI("init");
+      const createResult = JSON.parse((await runCLI("create", "Test Issue")).stdout.trim());
+      const issueId = createResult.id;
+
+      const { stderr, exitCode } = await runCLI(
+        "comments",
+        "update",
+        issueId,
+        "fake000000",
+        "--content",
+        "Updated",
+      );
+
+      expect(exitCode).toBe(7);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("COMMENT_NOT_FOUND");
+    });
+
+    test("comments delete on non-existent comment prints COMMENT_NOT_FOUND", async () => {
+      await runCLI("init");
+      const createResult = JSON.parse((await runCLI("create", "Test Issue")).stdout.trim());
+      const issueId = createResult.id;
+
+      const { stderr, exitCode } = await runCLI("comments", "delete", issueId, "fake000000");
+
+      expect(exitCode).toBe(7);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("COMMENT_NOT_FOUND");
+    });
+
+    test("comments list on non-existent issue prints NOT_FOUND", async () => {
+      await runCLI("init");
+
+      const { stderr, exitCode } = await runCLI("comments", "list", "missing12345");
+
+      expect(exitCode).toBe(5);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("NOT_FOUND");
+    });
+
+    test("comments add when not initialized prints NOT_INITIALIZED", async () => {
+      const { stdout, stderr, exitCode } = await runCLI(
+        "comments",
+        "add",
+        "missing12345",
+        "--content",
+        "Hello",
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout).toBe("");
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("NOT_INITIALIZED");
     });
   });
 });

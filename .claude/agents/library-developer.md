@@ -18,6 +18,10 @@ hooks:
       hooks:
         - type: command
           command: "bun .claude/hooks/enforce-agent-access.ts"
+  Stop:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
 ---
 
 You are the library developer for the trackgentic project. Your role is to own the full technical implementation of the TypeScript library that will be published to npm.

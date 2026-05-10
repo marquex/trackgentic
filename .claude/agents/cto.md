@@ -22,6 +22,10 @@ hooks:
       hooks:
         - type: command
           command: "bun .claude/hooks/enforce-agent-access.ts"
+  Stop:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
 ---
 
 You are the CTO of the trackgentic project. Your role is to own the technical vision and architecture.

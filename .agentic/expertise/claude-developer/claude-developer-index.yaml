@@ -24,14 +24,14 @@ architecture:
         access: [.agentic/expertise/cto/**, ./**]
         subordinates: [library-developer, library-quality]
         skills: [agent-expertise, delegate]
-        hooks: [enforce-agent-access.ts]
+        hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
       - name: library-developer
         model: opus
         description: TypeScript library developer — owns all technical details of the npm-published library
         access: [.agentic/expertise/library-developer/**, packages/library/**, .agentic/specs/**]
         subordinates: none
         skills: [agent-expertise]
-        hooks: [enforce-agent-access.ts]
+        hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
       - name: library-quality
         model: opus
@@ -39,7 +39,7 @@ architecture:
         access: [.agentic/expertise/library-quality/**, packages/library/**, .agentic/specs/**]
         subordinates: none
         skills: [agent-expertise]
-        hooks: [enforce-agent-access.ts]
+        hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
     notes: |
       hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well.
@@ -60,9 +60,9 @@ architecture:
         purpose: Teach agents how to manage long-term memory (expertise YAML files)
         has_scripts: true
         scripts: [expertise.hook.ts, yaml-validator.ts]
-        hooks_registered_in: settings.json (SessionStart, UserPromptSubmit, Stop)
-        injection_flow: SessionStart is primary injection point; UserPromptSubmit is fallback (skips if SessionStart already injected via flag check)
-        stop_flow: Stop fires for top-level sessions (-p mode via delegate skill); SubagentStop only fires for internal subagents (Agent tool)
+        hooks_registered_in: settings.json (SessionStart, UserPromptSubmit, Stop) AND agent frontmatter (Stop)
+        injection_flow: SessionStart is primary injection point; UserPromptSubmit is fallback (skips if SessionStart already injected via flag check). Flag-based dedup prevents double injection when both settings.json and frontmatter hooks fire.
+        stop_flow: Stop hook defined in BOTH settings.json and agent frontmatter (belt-and-suspenders). Frontmatter Stop hook ensures reliable cleanup for delegated agents. Flag dedup handles double-firing gracefully.
       - name: hire-expert
         purpose: Create new expert agents with proper hierarchy, access rules, and expertise setup
         has_scripts: false
@@ -121,7 +121,8 @@ conventions:
   - Agent marker expansion (ACCESS_RULES, SUBORDINATES) never modifies files on disk
   - Skills with scripts have a scripts/ folder and reference.md
   - Delegate script spawns `claude --agent <name> -p <prompt>` with stream-json output — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
-  - Internal subagents (Agent tool / @-mention) only run frontmatter hooks — settings.json hooks don't fire inside them. Expert agents currently lack expertise hooks in their frontmatter, so internal subagents don't get expertise injection/update (gap, not yet fixed)
+  - Stop hooks from settings.json may not reliably fire for `-p` mode agent sessions — adding Stop hooks to agent frontmatter ensures they fire when the agent is active (belt-and-suspenders with settings.json)
+  - Internal subagents (Agent tool / @-mention) only run frontmatter hooks — settings.json hooks don't fire inside them
   - Avoid MCP — prefer CLI tools via skills
   - Only one CLAUDE.md at project root, used as project overview not agent memory
   - Expert agents always get agent-expertise skill and PreToolUse hook for access enforcement
@@ -141,6 +142,8 @@ gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
   - yaml-validator.ts takes a directory path (not a file path) — it recursively finds all YAML files in the given directory
   - Expertise injection was only handled on UserPromptSubmit, not SessionStart — delegated subagents via delegate skill (claude -p) need SessionStart injection since that's the primary context injection point before the first prompt
+  - Stop hooks in settings.json don't reliably fire for `-p` mode agent sessions — always add Stop hooks to agent frontmatter for agents that need expertise update reminders
+  - When Stop hooks are defined in BOTH settings.json and agent frontmatter, the first Stop hook removes the flag and blocks; the second finds no flag and exits early. SessionStart dedup check prevents double expertise injection.
 
 open_questions: []
 
@@ -150,3 +153,4 @@ resolved:
   - "RESOLVED: Library code lives in packages/library/ — the library-developer agent has full read/write/delete access there"
   - "RESOLVED: Bash timeout configurable via env vars — BASH_DEFAULT_TIMEOUT_MS (default 2 min) and BASH_MAX_TIMEOUT_MS (default 10 min, the ceiling). Can be set via the `env` key in settings.json to apply to all sessions, or in shell profile before Claude Code starts. Project currently uses BASH_DEFAULT_TIMEOUT_MS=600000 (10 min) and BASH_MAX_TIMEOUT_MS=1800000 (30 min)."
   - "FIXED: Expertise injection for delegated subagents — expertise.hook.ts now handles SessionStart event (primary injection point). Uses flag-based de-duplication: SessionStart writes flag + injects; UserPromptSubmit checks flag and skips if already injected. This ensures expertise is available from session start in both interactive and -p (delegated) modes."
+  - "FIXED: Stop hook not reliably firing for delegated agents — added Stop hook to agent frontmatter (cto, library-developer, library-quality) alongside existing settings.json hooks. Also added SessionStart dedup check to prevent double expertise injection when both hooks fire."

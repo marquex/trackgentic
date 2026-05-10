@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — Phases 1-3 complete. 167 tests, 99.22% line coverage. Prettier + ESLint tooling."
+expertise_status: "Active — Phases 1-4 complete. 216 tests, 99.22% line coverage. Prettier + ESLint tooling."
 
 project_phases:
   phase_1_foundation:
@@ -20,31 +20,35 @@ project_phases:
     status: complete
     modules: [auth (resolveAuthor), types/user.ts, types/config.ts, CLI users commands]
     description: "Three auth modes (open/read-only/strict), user registration with tokens, CLI users register/list/revoke/regenerate"
-  phase_4_dependency_graph:
+  phase_4_comments:
+    status: complete
+    modules: [events (computeComments), tracker (commentsAdd/commentsUpdate/commentsDelete/commentsList), cli/commands/comments.ts, cli/runner.ts]
+    description: "Comment CRUD — add, update, delete, list comments on issues. computeComments() replays events to build comment state. CLI comments subcommands."
+  phase_5_dependency_graph:
     status: future
     modules: [dependency-manager.ts — placeholder only]
-  phase_5_workflow_rules:
+  phase_6_workflow_rules:
     status: planned
-  phase_6_cli_refinement:
+  phase_7_cli_refinement:
     status: planned
 
 source_layout:
-  total_lines: 1993
-  types: [api.ts (134 lines), event.ts (106), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
-  core: [tracker.ts (597), index-manager.ts (161), events.ts (108), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), dependency-manager.ts (2, placeholder), id.ts (18)]
-  cli: [runner.ts (101), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13), bin.ts (5)]
+  total_lines: 2198
+  types: [api.ts (135 lines), event.ts (107), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
+  core: [tracker.ts (835), index-manager.ts (161), events.ts (156), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), dependency-manager.ts (2, placeholder), id.ts (18)]
+  cli: [runner.ts (133), commands/comments.ts (103), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13), bin.ts (5)]
   public_api: "src/index.ts re-exports Tracker class, TrackgenticError, all type and response type aliases"
 
 test_layout:
-  total_tests: 167
-  total_expect_calls: 846
-  total_lines: 2704
+  total_tests: 216
+  total_expect_calls: 972
+  total_lines: 3200
   test_helpers: [helpers/setup.ts (createTestDir, cleanupTestDir), helpers/fixtures.ts (createIssueParams, updateIssueParams), helpers/assertions.ts (expectError, expectOk)]
   files:
-    core_tracker: { tests: 74, lines: 1136, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration] }
-    cli_commands: { tests: 27, lines: 484, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate] }
+    core_tracker: { tests: 97, lines: 1700, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration, comments auth integration, comments (add/update/delete/list + error paths)] }
+    cli_commands: { tests: 36, lines: 680, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths] }
     core_index_manager: { tests: 22, lines: 284, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry] }
-    core_events: { tests: 15, lines: 336, describes: [computeState, appendEvent, replayEvents] }
+    core_events: { tests: 23, lines: 544, describes: [computeState, appendEvent, replayEvents, computeComments] }
     core_auth: { tests: 13, lines: 204, describes: [open mode, read-only mode, strict mode, env var fallback] }
     core_id: { tests: 8, lines: 52, describes: [generateId, generateCommentId] }
     core_file_io: { tests: 6, lines: 90, describes: [atomicWriteJSON, readJSON] }
@@ -102,9 +106,9 @@ learnings:
     - "Each test file uses beforeEach to create a fresh test directory and afterEach to clean up."
     - "CLI command tests spawn the CLI via bun subprocess and check stdout/exit codes."
     - "auth.test.ts tests resolveAuthor in isolation — doesn't need Tracker instance."
-    - "events.test.ts tests computeState, appendEvent, replayEvents — pure functions + fs."
+    - "events.test.ts tests computeState, appendEvent, replayEvents, computeComments — pure functions + fs."
     - "resolution.ts has 93.75% coverage — the filesystem-root walk-up edge case (parent === current) is untested."
   error_handling:
     - "TrackgenticError carries result code, message, and exitCode. 12 error codes defined."
     - "ErrorCodes: NOT_INITIALIZED, ALREADY_INITIALIZED, TOKEN_REQUIRED, INVALID_TOKEN, DEFAULT_USER_MISSING, NOT_FOUND, ISSUE_MISSING, COMMENT_NOT_FOUND, USER_ALREADY_EXISTS, USER_NOT_FOUND, INVALID_PARAMS, BLOCKAGE_CYCLE, HIERARCHY_CONSTRAINT."
-    - "Both error codes BLOCKAGE_CYCLE (exit 11) and HIERARCHY_CONSTRAINT (exit 12) are defined but not yet used — Phase 4+."
+    - "Both error codes BLOCKAGE_CYCLE (exit 11) and HIERARCHY_CONSTRAINT (exit 12) are defined but not yet used — Phase 5+."

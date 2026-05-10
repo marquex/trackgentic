@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 3 complete. Auth system, user CRUD, auth integration into all methods, CLI user commands. 167 tests, 846 assertions, 99.22% coverage. Tooling swapped from Biome to Prettier + ESLint. All quality gates passing. Ready for Phase 4."
+expertise_status: "Phase 4 complete. Comments lifecycle (add/update/delete/list) with computeComments event replay, CLI comment commands. 216 tests, 972 assertions, 99.22% coverage. Quality validated with auth integration + error path tests. All quality gates passing. Ready for Phase 5 (hierarchy)."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Phase 3 complete (auth + users), ready for Phase 4 (comments)
+  stage: Phase 4 complete (comments), ready for Phase 5 (hierarchy)
   bun_version: "1.3.11"
 
 detail_files:
@@ -44,6 +44,8 @@ specifications:
       description: Quality plan — now uses Prettier + ESLint (was Biome). Linting, typechecking (strict+), testing (Bun), test organization, documentation (TypeDoc), quality gates
     - path: 07-phase3-auth-users.md
       description: Phase 3 specification — auth module (resolveAuthor), user CRUD (register/list/revoke/regenerate), auth integration into existing methods, CLI user commands
+    - path: 07-phase4-comments-spec.md
+      description: Phase 4 specification — computeComments function, 4 Tracker comment methods, CLI comment commands, test plan
 
 access_boundaries:
   rule: "CTO must NOT read or modify files under packages/library/. All code changes go through subordinates."
@@ -140,3 +142,9 @@ session_log:
   - session: 22
     date: "2026-05-10"
     summary: "User asked to update subordinate expertise files (library-developer and library-quality had stale expertise after Phase 2/3 completion and Biome→ESLint+Prettier swap). Delegated expertise updates to both agents in parallel. Both completed successfully: library-developer updated with full Phase 2/3 details, tooling swap, CLI commands, architecture, type system, testing patterns. library-quality updated with deprecated Biome learnings, current coverage (99.22%/100%), full source/test layout, ESLint/Prettier patterns. Both verified quality gates pass before finalizing. No code changes — expertise maintenance only."
+  - session: 23
+    date: "2026-05-10"
+    summary: "User requested Phase 4 implementation. Created detailed Phase 4 spec (07-phase4-comments-spec.md) covering computeComments, 4 Tracker methods, CLI commands, test plan. Delegated to library-developer — completed in single delegation (193 tests, 926 assertions). Verified quality gates independently. Delegated to library-quality for validation — found and filled auth integration gaps, added 23 more tests. Final: 216 tests, 972 assertions, 99.22% coverage. Updated status.yaml and cto-index.yaml with post-validation numbers. Phase 4 complete."
+  - session: 24
+    date: "2026-05-10"
+    summary: "User noticed library-developer expertise was stale after Phase 4. Delegated expertise update to library-developer. No code changes — expertise maintenance only."

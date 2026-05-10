@@ -2,8 +2,8 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: Phase 3 complete — ready for Phase 4 implementation
-  source_code: Phase 1+2+3 implemented (event engine, CRUD, auth system, user management, CLI user commands)
+  phase: Phase 4 complete — ready for Phase 5 implementation
+  source_code: Phase 1+2+3+4 implemented (event engine, CRUD, auth system, user management, comments lifecycle, CLI comment commands)
   monorepo_files:
     - package.json (root workspace config)
     - packages/library/package.json (11 scripts, eslint + prettier + typedoc + typescript + @types/bun)
@@ -74,6 +74,38 @@ current_state:
       - Token format: tk_ + 8 random alphanumeric chars
       - User names stored lowercase, "anonymous" reserved
       - usersRegister is the only operation that doesn't require auth (bootstrap mechanism)
+  phase_4_results:
+    tests: 216 passing, 972 assertions, 99.22% coverage (100% functions, 99.22% lines)
+    typecheck: clean (strict + 4 extra flags)
+    lint: clean (ESLint, zero errors)
+    format: clean (Prettier, zero issues)
+    docs_check: clean (TypeDoc parses all source)
+    coverage_by_file:
+      auth.ts: 100%/100%
+      tracker.ts: 100%/100%
+      errors.ts: 100%/100%
+      events.ts: 100%/100%
+      file-io.ts: 100%/100%
+      id.ts: 100%/100%
+      index-manager.ts: 100%/100%
+      resolution.ts: 100%/93.75% (V8 artifact)
+    new_files:
+      cli: commands/comments.ts (add/update/delete/list actions)
+    modified_files:
+      core: events.ts (added computeComments function), tracker.ts (added 4 comment methods)
+      cli: runner.ts (registered comments subcommand)
+      tests: events.test.ts (+8 tests), tracker.test.ts (+14 tests), commands.test.ts (+4 tests)
+    quality_additions:
+      tests_added_by_quality: 23 additional tests (auth integration, author override, NOT_INITIALIZED, ISSUE_MISSING, NOT_FOUND, CLI error paths)
+      total_new_tests_phase4: 49 (26 by developer + 23 by quality)
+    design_decisions:
+      - computeComments is an internal function (not exported from barrel)
+      - Comment state computed by replaying all events (same pattern as computeState)
+      - Deleted comments are excluded by removing from the Map, not by soft-delete flag
+      - Comments returned in creation order (sorted by timestamp)
+    quality_notes:
+      - library-quality identified and covered auth integration gaps for comment methods
+      - All error paths now tested: NOT_FOUND, COMMENT_NOT_FOUND, NOT_INITIALIZED, ISSUE_MISSING, TOKEN_REQUIRED
   last_updated: "2026-05-10"
   blockers: []
 
@@ -96,6 +128,8 @@ implementation_roadmap:
     phase_4_comments:
       description: "Comment lifecycle: add/update/delete/list with event replay"
       exit_criteria: "Full comment CRUD with computed state from event replay"
+      status: complete
+      notes: "26 new tests. computeComments function added to events.ts. 4 Tracker methods + CLI commands."
     phase_5_hierarchy:
       description: "childrenOf map, upward auto-promotion, downward cascade, reparenting"
       exit_criteria: "Tree constraints enforced, system-authored events in history"
