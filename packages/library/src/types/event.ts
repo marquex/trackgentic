@@ -79,6 +79,7 @@ export interface BlockageResolvedEvent extends BaseEvent {
   type: "blockage-resolved";
   content: {
     blockerId: IssueId;
+    reason?: string;
   };
 }
 

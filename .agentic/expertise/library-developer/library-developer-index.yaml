@@ -6,18 +6,18 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Phase 1-5 complete. 284 tests passing (1101 assertions), 99.31% coverage, typecheck & lint clean."
+expertise_status: "Phase 1-6 complete. 342 tests passing (1283 assertions), 99.83% coverage, typecheck & lint clean."
 
 knowledge:
   project_structure:
     - "Monorepo: root workspace with packages/library (the npm package)"
     - "Package entry: src/index.ts (barrel exports), src/bin.ts (CLI with shebang)"
     - "Types in src/types/, core logic in src/core/, CLI in src/cli/"
-    - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users, comments)"
+    - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users, comments, blockages)"
     - "Tests in tests/ using bun:test (describe/test/expect)"
     - "Test helpers in tests/helpers/ (setup.ts, fixtures.ts, assertions.ts)"
     - "Test structure mirrors src: tests/core/, tests/cli/ (no tests/integration/ yet — empty dir)"
-    - "dependency-manager.ts still a stub (Phase 6)"
+    - "dependency-manager.ts — blockage CRUD, impact scoring (getImpactScore with recursive BFS), cycle detection (detectCycle with DFS)"
     - "hierarchy.ts — pure functions for hierarchy validation and status cascade logic"
 
   build_and_run:
@@ -61,6 +61,13 @@ knowledge:
     - "Issue create() validates parentId: parent must exist, not be closed, child added to childrenOf map"
     - "Issue update() handles downward cascade (auto-close done children when parent closes), upward auto-promotion (child advancing past parent promotes recursively), reparenting (changing parentId with constraint checks)"
     - "Status ordering: open < in-progress < done < closed; closed items cannot have children added"
+    - "Dependency manager: readDependencies/writeDependencies for dependencies.json persistence"
+    - "Blockage operations: addBlockage (appends BlockageAddedEvent to issue events + writes dependencies.json), resolveBlockage (appends BlockageResolvedEvent), deleteBlockage (appends BlockageDeletedEvent)"
+    - "getImpactScore(blockedIssueId) — recursive BFS counting all transitively blocked issues (via children hierarchy), returns count"
+    - "detectCycle(sourceId, targetId, deps) — DFS from targetId through blockedBy edges, returns true if path reaches sourceId"
+    - "blockagesAdd supports batch: multiple blockages in one call, with single cycle-check pass over accumulated proposed edges"
+    - "Auto-resolution: tracker.update() auto-resolves blockages when an issue transitions to done/closed status"
+    - "List sort uses impact score as tiebreaker (higher impact = earlier in list)"
 
   type_system:
     - "All types match spec 02-data-model.md and 03-api-specification.md exactly"
@@ -79,9 +86,9 @@ knowledge:
     - "Tests use createTestDir() from tests/helpers/setup.ts for isolation with cleanup"
     - "CLI tests use Bun.spawn to run bin.ts as subprocess, check stdout/stderr/exitCode"
     - "ID tests verify length (10), format (base36), and uniqueness (100 samples)"
-    - "284 tests across 9 files: auth, events, file-io, id, index-manager, resolution, tracker, hierarchy, CLI commands"
-    - "99.31% line coverage"
-    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker,hierarchy}.test.ts + tests/cli/commands.test.ts"
+    - "342 tests across 10 files: auth, events, file-io, id, index-manager, resolution, tracker, hierarchy, dependency-manager, CLI commands"
+    - "99.83% line coverage, 99.38% branch coverage"
+    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker,hierarchy,dependency-manager}.test.ts + tests/cli/commands.test.ts"
 
   cli_commands:
     - "init — no args, creates .trackgentic/ dir"
@@ -98,6 +105,10 @@ knowledge:
     - "comments update <issueId> <commentId> <content> — updates a comment's content"
     - "comments delete <issueId> <commentId> — soft-deletes a comment"
     - "comments list <issueId> — lists all comments on an issue"
+    - "blockages add <issueId> <blockedById> — adds a blockage (issue blocked by another); supports --reason option"
+    - "blockages resolve <issueId> <blockedById> — resolves a blockage"
+    - "blockages delete <issueId> <blockedById> — deletes a blockage"
+    - "blockages list <issueId> — lists all blockages on an issue"
 
   phase_status:
     phase_1: "COMPLETE — types, core (errors, id, resolution, file-io, tracker.init), CLI (runner, output, init cmd), barrel exports"
@@ -105,5 +116,5 @@ knowledge:
     phase_3: "COMPLETE — auth system (auth.ts: resolveAuthor with open/read-only/strict modes, token validation, env var lookup), user management (usersRegister, usersList, usersRevoke, usersRegenerate), CLI users commands"
     phase_4: "COMPLETE — computeComments() in events.ts (replay comment events into ComputedComment[]), 4 Tracker methods (commentsAdd, commentsUpdate, commentsDelete, commentsList), CLI comments subcommand (src/cli/commands/comments.ts), comments registered in runner.ts. 26 new tests (8 events + 14 tracker + 4 CLI)."
     phase_5: "COMPLETE — hierarchy.ts (pure validation/cascade functions: isStatusAfter, validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions), index-manager extended with addChild/removeChild/getChildren, tracker.create() validates parentId, tracker.update() handles downward cascade + upward auto-promotion + reparenting. HIERARCHY_CONSTRAINT error (exit 12). 68 new tests. No CLI changes."
-    phase_6: "NOT STARTED — blockages & dependencies (dependency-manager.ts still a stub)"
+    phase_6: "COMPLETE — dependency-manager.ts (readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore with recursive BFS, detectCycle with DFS), 4 Tracker methods (blockagesAdd with batch cycle detection, blockagesResolve, blockagesDelete, blockagesList), auto-resolution on done/closed transitions, impact score in list sort, CLI blockages subcommand (add/resolve/delete/list). BLOCKAGE_CYCLE error. 58 new tests across dependency-manager.test.ts + additions to tracker.test.ts + commands.test.ts."
     phase_7: "NOT STARTED — polish & hardening"

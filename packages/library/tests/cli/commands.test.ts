@@ -703,4 +703,182 @@ describe("CLI commands", () => {
       expect(result.result).toBe("NOT_INITIALIZED");
     });
   });
+
+  // ─── Blockages CLI Tests ──────────────────────────────────────────
+
+  describe("blockages add", () => {
+    test("adds a blockage and returns OK", async () => {
+      await runCLI("init");
+      const blocked = JSON.parse((await runCLI("create", "Blocked")).stdout.trim());
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "blockages",
+        "add",
+        blocked.id,
+        "--by",
+        blocker.id,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+    });
+
+    test("adds multiple blockers at once", async () => {
+      await runCLI("init");
+      const blocked = JSON.parse((await runCLI("create", "Blocked")).stdout.trim());
+      const blocker1 = JSON.parse((await runCLI("create", "Blocker 1")).stdout.trim());
+      const blocker2 = JSON.parse((await runCLI("create", "Blocker 2")).stdout.trim());
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "blockages",
+        "add",
+        blocked.id,
+        "--by",
+        blocker1.id,
+        blocker2.id,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+    });
+
+    test("with cycle → BLOCKAGE_CYCLE error JSON on stderr", async () => {
+      await runCLI("init");
+      const a = JSON.parse((await runCLI("create", "A")).stdout.trim());
+      const b = JSON.parse((await runCLI("create", "B")).stdout.trim());
+
+      // A blocked by B
+      await runCLI("blockages", "add", a.id, "--by", b.id);
+
+      // Try B blocked by A → cycle
+      const { stderr, exitCode } = await runCLI("blockages", "add", b.id, "--by", a.id);
+
+      expect(exitCode).toBe(11);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("BLOCKAGE_CYCLE");
+    });
+
+    test("on non-existent issue → NOT_FOUND error", async () => {
+      await runCLI("init");
+      await runCLI("create", "Blocker");
+
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      const { stderr, exitCode } = await runCLI(
+        "blockages",
+        "add",
+        "missing12345",
+        "--by",
+        blocker.id,
+      );
+
+      expect(exitCode).toBe(5);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("NOT_FOUND");
+    });
+  });
+
+  describe("blockages resolve", () => {
+    test("resolves a blockage and returns OK", async () => {
+      await runCLI("init");
+      const blocked = JSON.parse((await runCLI("create", "Blocked")).stdout.trim());
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      await runCLI("blockages", "add", blocked.id, "--by", blocker.id);
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "blockages",
+        "resolve",
+        blocked.id,
+        "--by",
+        blocker.id,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+    });
+  });
+
+  describe("blockages delete", () => {
+    test("deletes a blockage and returns OK", async () => {
+      await runCLI("init");
+      const blocked = JSON.parse((await runCLI("create", "Blocked")).stdout.trim());
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      await runCLI("blockages", "add", blocked.id, "--by", blocker.id);
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "blockages",
+        "delete",
+        blocked.id,
+        "--by",
+        blocker.id,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+    });
+  });
+
+  describe("blockages list", () => {
+    test("returns correct blockage info JSON", async () => {
+      await runCLI("init");
+      const blocked = JSON.parse((await runCLI("create", "Blocked")).stdout.trim());
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      await runCLI("blockages", "add", blocked.id, "--by", blocker.id);
+
+      const { stdout, stderr, exitCode } = await runCLI("blockages", "list", blocked.id);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.issueId).toBe(blocked.id);
+      expect(result.blockedBy).toHaveLength(1);
+      expect(result.blockedBy[0].blockerId).toBe(blocker.id);
+      expect(result.blockedBy[0].blockedId).toBe(blocked.id);
+      expect(result.blockedBy[0].status).toBe("active");
+      expect(result.blocks).toHaveLength(0);
+    });
+
+    test("returns empty arrays for issue with no blockages", async () => {
+      await runCLI("init");
+      const issue = JSON.parse((await runCLI("create", "Standalone")).stdout.trim());
+
+      const { stdout, exitCode } = await runCLI("blockages", "list", issue.id);
+
+      expect(exitCode).toBe(0);
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.blockedBy).toEqual([]);
+      expect(result.blocks).toEqual([]);
+    });
+
+    test("on non-existent issue → NOT_FOUND error", async () => {
+      await runCLI("init");
+
+      const { stderr, exitCode } = await runCLI("blockages", "list", "missing12345");
+
+      expect(exitCode).toBe(5);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("NOT_FOUND");
+    });
+  });
 });

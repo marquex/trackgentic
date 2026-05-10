@@ -2,8 +2,8 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: Phase 5 complete — ready for Phase 6 implementation
-  source_code: Phase 1+2+3+4+5 implemented (event engine, CRUD, auth, comments, hierarchy with upward/downward constraints)
+  phase: Phase 6 complete — ready for Phase 7 (polish & hardening)
+  source_code: Phase 1+2+3+4+5+6 implemented (event engine, CRUD, auth, comments, hierarchy, blockages with cycle detection + auto-resolution)
   monorepo_files:
     - package.json (root workspace config)
     - packages/library/package.json (11 scripts, eslint + prettier + typedoc + typescript + @types/bun)
@@ -138,8 +138,29 @@ current_state:
       - Upward promotion is recursive through ancestors
       - Only closed parents block new children (done/idea/etc. are allowed)
       - HIERARCHY_CONSTRAINT (exit code 12) prevents the operation entirely — no partial state changes
+  phase_6_results:
+    status: quality_validated
+    typecheck: clean (strict + 4 extra flags)
+    lint: clean (ESLint, zero errors)
+    format: clean (Prettier, zero issues)
+    docs_check: clean (TypeDoc parses all source)
+    new_files:
+      core: dependency-manager.ts (readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore, detectCycle)
+      cli: commands/blockages.ts (add/resolve/delete/list subcommands)
+      tests: tests/core/dependency-manager.test.ts
+    modified_files:
+      core: tracker.ts (4 blockage methods + auto-resolution on done/closed + impact score in list sort), events.ts
+      cli: runner.ts (registered blockages subcommand)
+      tests: tracker.test.ts (blockage tests), commands.test.ts (CLI blockage tests)
+    design_decisions:
+      - Cycle detection walks blockedBy graph transitively from proposed blocker, only active entries
+      - Batch add validates against projected state — all cycle checks pass before any write (atomic)
+      - Auto-resolution fires on done/closed transition — resolves active blocks entries with system-authored events
+      - Impact score counts active blocks entries — used in list sort (priority ASC → impact DESC → id ASC)
+      - BLOCKAGE_CYCLE error (exit code 11) prevents operation entirely, no partial state changes
+    spec: .agentic/specs/07-phase6-blockages-spec.md
   last_updated: "2026-05-10"
-  phase_5_complete_date: "2026-05-10"
+  phase_6_complete_date: "2026-05-10"
   blockers: []
 
 implementation_roadmap:
@@ -171,6 +192,8 @@ implementation_roadmap:
     phase_6_blockages:
       description: "Dependency maps, cycle detection, batch atomicity, auto-resolution, impact score"
       exit_criteria: "Full blockage lifecycle with cycle detection and auto-resolution"
+      status: complete
+      notes: "dependency-manager.ts fully implemented. 4 Tracker methods + auto-resolution + impact score + CLI commands. Quality validated."
     phase_7_polish:
       description: "Edge case testing, package config, error messages, JSDoc"
       exit_criteria: "Package installs and CLI works from any directory, all tests pass"

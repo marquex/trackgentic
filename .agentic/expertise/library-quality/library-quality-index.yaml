@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — Phases 1-5 complete. 284 tests, 1129 assertions, 99.31% line coverage. Prettier + ESLint tooling."
+expertise_status: "Active — Phases 1-6 complete. 342 tests, 1283 assertions, 99.38% line coverage. Prettier + ESLint tooling."
 
 project_phases:
   phase_1_foundation:
@@ -29,28 +29,30 @@ project_phases:
     modules: [hierarchy.ts (106 lines — isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue), index-manager.ts (202 lines — parent/children support), tracker.ts (1025 lines — --parentId on create/update, cascade-close), cli/commands/create.ts, cli/commands/update.ts]
     description: "Issue hierarchy — parent-child relationships via parentId, status progression constraints (child must not be ahead of parent), cascade-close on parent close, reparenting, done parents allowed. CLI --parentId flag on create and update."
   phase_6_blockages:
-    status: next
-    description: "Blockage tracking — add/resolve/delete blockages on issues. Error codes BLOCKAGE_CYCLE and HIERARCHY_CONSTRAINT to be implemented."
+    status: complete
+    modules: [dependency-manager.ts (181 lines — readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore, detectCycle), tracker.ts (1329 lines — blockagesAdd/blockagesResolve/blockagesDelete/blockagesList + auto-resolution in update + impact score in list), cli/commands/blockages.ts (107 lines — add/resolve/delete/list actions), cli/runner.ts (164 lines — blockages subcommand registration)]
+    description: "Blockage & dependency system — bidirectional dependency maps (blockedBy/blocks), cycle detection (BFS walk), batch atomicity, auto-resolution on done/closed, impact score for list sorting, CLI blockages subcommands (add/resolve/delete/list)."
   phase_7_cli_refinement:
-    status: planned
+    status: next
 
 source_layout:
-  total_lines: 2748
-  types: [api.ts (134 lines), event.ts (106), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
-  core: [tracker.ts (1025), index-manager.ts (202), hierarchy.ts (106), events.ts (155), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), dependency-manager.ts (2, placeholder), id.ts (18)]
-  cli: [runner.ts (132), commands/comments.ts (102), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13), bin.ts (5)]
-  public_api: "src/index.ts re-exports Tracker class, TrackgenticError, all type and response type aliases"
+  total_lines: 3466
+  types: [api.ts (134 lines), event.ts (107), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
+  core: [tracker.ts (1329), dependency-manager.ts (181), index-manager.ts (202), hierarchy.ts (106), events.ts (155), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), id.ts (18)]
+  cli: [runner.ts (164), commands/blockages.ts (107), commands/comments.ts (102), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13)]
+  public_api: "src/index.ts (62 lines) re-exports Tracker class, TrackgenticError, all type and response type aliases"
 
 test_layout:
-  total_tests: 284
-  total_expect_calls: 1129
-  total_lines: 4700
+  total_tests: 342
+  total_expect_calls: 1283
+  total_lines: 5686
   test_helpers: [helpers/setup.ts (19 lines — createTestDir, cleanupTestDir), helpers/fixtures.ts (24 lines — createIssueParams, updateIssueParams), helpers/assertions.ts (18 lines — expectError, expectOk)]
   files:
-    core_tracker: { tests: ~130, lines: 2319, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration, comments auth integration, comments (add/update/delete/list + error paths), hierarchy (parentId create, parentId update, reparent, cascade-close, status constraints, auth integration for hierarchy, edge cases)] }
-    cli_commands: { tests: ~50, lines: 706, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests] }
-    core_index_manager: { tests: ~30, lines: 366, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry, parent/children index operations] }
-    core_hierarchy: { tests: 30, lines: 304, describes: [isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue] }
+    core_tracker: { tests: ~163, lines: 2921, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration, comments auth integration, comments (add/update/delete/list + error paths), hierarchy (parentId create, parentId update, reparent, cascade-close, status constraints, auth integration for hierarchy, edge cases), blockages (add/resolve/delete/list + batch atomicity + cycle detection + auto-resolution + impact score + NOT_FOUND/NOT_INITIALIZED), blockages auth integration (read-only/strict modes + token validation)] }
+    cli_commands: { tests: ~47, lines: 884, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests, blockages add (single + multiple + cycle + NOT_FOUND), blockages resolve, blockages delete, blockages list (happy path + empty + NOT_FOUND)] }
+    core_dependency_manager: { tests: 19, lines: 206, describes: [addBlockage (both maps, idempotency, immutability), resolveBlockage (both maps, non-existent no-op, already resolved), deleteBlockage (both maps, non-existent no-op, selective removal in blockedBy, selective removal in blocks), getImpactScore (active count, zero for no blocks, ignores resolved), detectCycle (direct, transitive, no cycle, ignores resolved, self-block, same blocker multiple issues)] }
+    core_index_manager: { tests: ~32, lines: 366, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry, parent/children index operations] }
+    core_hierarchy: { tests: 29, lines: 304, describes: [isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue] }
     core_events: { tests: 23, lines: 543, describes: [computeState, appendEvent, replayEvents, computeComments] }
     core_auth: { tests: 13, lines: 202, describes: [open mode, read-only mode, strict mode, env var fallback] }
     core_id: { tests: 8, lines: 52, describes: [generateId, generateCommentId] }
@@ -58,10 +60,11 @@ test_layout:
     core_resolution: { tests: 4, lines: 57, describes: [resolveTrackerDir] }
 
 current_coverage:
-  overall_line: 99.31%
-  overall_func: 99.77%
+  overall_line: 99.38%
+  overall_func: 99.83%
   per_file:
     auth: 100% / 100%
+    dependency_manager: 100% / 100%
     errors: 100% / 100%
     events: 100% / 100%
     file_io: 100% / 100%  # was 61.90% — error paths now tested
@@ -69,7 +72,7 @@ current_coverage:
     id: 100% / 100%
     index_manager: 100% / 100%
     resolution: 93.75% / 100%  # filesystem root walk-up path untested
-    tracker: 100% / 97.96%  # small function gap — unused static method or similar
+    tracker: 100% / 98.31%  # readDependenciesSync internal function — used only in sort comparator, likely an indirect gap
 
 tooling:
   formatter: prettier (v3.5.3)
@@ -95,7 +98,7 @@ learnings:
   bun_coverage:
     - "Bun's coverageThreshold in bunfig.toml applies per-file, not just overall."
     - "coverageThreshold=0 means report coverage without failing on per-file thresholds."
-    - "Current coverage: 99.31% line, 99.77% function across all source files."
+    - "Current coverage: 99.38% line, 99.83% function across all source files."
   typescript:
     - "4 extra strict flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature) are enabled and pass clean."
     - "noPropertyAccessFromIndexSignature requires bracket notation for dynamic keys (e.g. process.env['TRACKGENTIC_USER_TOKEN'])."
@@ -119,7 +122,7 @@ learnings:
     - "TrackgenticError carries result code, message, and exitCode. 13 error codes defined."
     - "ErrorCodes: NOT_INITIALIZED(1), ALREADY_INITIALIZED(0), TOKEN_REQUIRED(2), INVALID_TOKEN(3), DEFAULT_USER_MISSING(4), NOT_FOUND(5), ISSUE_MISSING(6), COMMENT_NOT_FOUND(7), USER_ALREADY_EXISTS(8), USER_NOT_FOUND(9), INVALID_PARAMS(10), BLOCKAGE_CYCLE(11), HIERARCHY_CONSTRAINT(12)."
     - "HIERARCHY_CONSTRAINT (exit 12) used in Phase 5 — parent status would constrain child, or parent is closed."
-    - "BLOCKAGE_CYCLE (exit 11) still unused — planned for Phase 6 blockages."
+    - "BLOCKAGE_CYCLE (exit 11) now active — used in Phase 6 blockages when addBlockage would create a cycle."
   phase_5_hierarchy:
     - "hierarchy.ts exports pure validation functions: isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue."
     - "index-manager.ts extended to track parentId and children arrays in IndexEntry."
@@ -128,3 +131,18 @@ learnings:
     - "Done parents ARE allowed — the constraint is only on closed parents for new children."
     - "CLI --parentId flag added to create and update commands."
     - "Prettier formatting issues found and fixed in test files during quality validation."
+  phase_6_blockages:
+    - "dependency-manager.ts is a pure function module — all functions take DependenciesFile and return a new DependenciesFile (immutable pattern). No filesystem I/O inside pure functions; readDependencies/writeDependencies are separate async functions."
+    - "Bidirectional maps (blockedBy + blocks) must always stay in sync. Every mutation function (add/resolve/delete) updates both maps. Tests verify both sides explicitly."
+    - "detectCycle uses BFS walk of blockedBy graph from blockerId. Only considers active entries. Uses visited set for safety against pre-existing cycles."
+    - "Batch atomicity: blockagesAdd validates ALL blockers against a projected (deep-cloned) state before writing. If any causes a cycle, the entire batch is rejected with no side effects."
+    - "Auto-resolution: integrated into Tracker.update() AFTER main update logic. When issue transitions to done/closed, reads deps, filters active blocks entries, resolves each, appends system-authored blockage-resolved events to blocked issues."
+    - "Impact score in list sort: readDependenciesSync (synchronous) used inside sort comparator because sort is synchronous. Lazy-loads deps once during sort."
+    - "Impact score sort order: priority ASC → impact score DESC → id ASC (age). Higher impact (more issues blocked) sorts first within same priority."
+    - "CLI blockages commands use --by flag for blocker IDs (comma-separated or repeated). blockages list takes a single positional issueId."
+    - "Auth integration tested for blockages: add/resolve/delete are write operations (require auth in read-only/strict), list is a read operation (allowed in read-only, blocked in strict)."
+    - "dependency-manager.test.ts is 19 pure function tests with 35 assertions — no filesystem needed. Empty DependenciesFile fixture used as starting point."
+    - "Tracker blockages section added ~33 new tests (163 total, was ~130). Covers: happy paths, batch atomicity, cycle detection, NOT_FOUND for blocked/blocker, NOT_INITIALIZED, auto-resolution for done/closed, auto-resolution no-op for no active blocks, selective auto-resolution (only active, skip resolved), impact score sort verification."
+    - "Blockages auth integration section: 9 tests covering read-only mode (TOKEN_REQUIRED for add/resolve/delete, OK for list), strict mode (TOKEN_REQUIRED for all including list), valid token (author from token in events), invalid token (INVALID_TOKEN)."
+    - "CLI blockages section: 10 tests covering add (single + multiple + cycle error + NOT_FOUND), resolve, delete, list (happy path + empty arrays + NOT_FOUND)."
+    - "Self-block test: detectCycle catches A blocked by A — the BFS starts at blockerId which equals blockedId, immediately returns true."

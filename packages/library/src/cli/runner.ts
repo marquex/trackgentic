@@ -1,5 +1,11 @@
 import { Command } from "commander";
 import {
+  blockagesAddAction,
+  blockagesDeleteAction,
+  blockagesListAction,
+  blockagesResolveAction,
+} from "./commands/blockages";
+import {
   commentsAddAction,
   commentsDeleteAction,
   commentsListAction,
@@ -127,6 +133,32 @@ export function createProgram(): Command {
     .command("regenerate <name>")
     .description("Regenerate a user's token (self-service only)")
     .action(usersRegenerateAction);
+
+  // ─── blockages ─────────────────────────────────────────────────────
+  const blockagesCmd = program.command("blockages").description("Manage issue blockages");
+
+  blockagesCmd
+    .command("add <blockedId>")
+    .description("Add blockage dependencies to an issue")
+    .requiredOption("--by <ids...>", "Blocker issue IDs")
+    .action(blockagesAddAction);
+
+  blockagesCmd
+    .command("resolve <blockedId>")
+    .description("Resolve blockage dependencies")
+    .requiredOption("--by <ids...>", "Blocker issue IDs to resolve")
+    .action(blockagesResolveAction);
+
+  blockagesCmd
+    .command("delete <blockedId>")
+    .description("Delete blockage dependencies")
+    .requiredOption("--by <ids...>", "Blocker issue IDs to delete")
+    .action(blockagesDeleteAction);
+
+  blockagesCmd
+    .command("list <issueId>")
+    .description("List blockage info for an issue")
+    .action(blockagesListAction);
 
   return program;
 }

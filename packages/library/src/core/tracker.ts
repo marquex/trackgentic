@@ -1,6 +1,13 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type {
+  BlockagesAddParams,
+  BlockagesAddResult,
+  BlockagesDeleteParams,
+  BlockagesDeleteResult,
+  BlockagesListResult,
+  BlockagesResolveParams,
+  BlockagesResolveResult,
   CommentAddParams,
   CommentAddResult,
   CommentDeleteParams,
@@ -49,6 +56,15 @@ import {
 } from "./index-manager";
 import { resolveTrackerDir } from "./resolution";
 import {
+  addBlockage,
+  deleteBlockage,
+  detectCycle,
+  getImpactScore,
+  readDependencies,
+  resolveBlockage,
+  writeDependencies,
+} from "./dependency-manager";
+import {
   computeUpwardPromotions,
   isStatusAfter,
   validateNewChild,
@@ -56,6 +72,14 @@ import {
 } from "./hierarchy";
 
 const TRACKGENTIC_DIR = ".trackgentic";
+
+/**
+ * Read dependencies.json synchronously (used inside sort comparator).
+ */
+function readDependenciesSync(trackerDir: string): DependenciesFile {
+  const contents = readFileSync(join(trackerDir, "dependencies.json"), "utf-8");
+  return JSON.parse(contents) as DependenciesFile;
+}
 
 /**
  * Default config.json contents.
@@ -327,9 +351,19 @@ export class Tracker {
       }
     }
 
-    // Sort: priority ASC → id ASC
+    // Read dependencies once for impact score
+    let deps: DependenciesFile | null = null;
+
+    // Sort: priority ASC → impact DESC → id ASC
     filtered.sort((a, b) => {
       if (a.priority !== b.priority) return a.priority - b.priority;
+      // Lazy-load deps only once for sorting
+      if (!deps) {
+        deps = readDependenciesSync(trackerDir);
+      }
+      const impactA = getImpactScore(deps, a.id);
+      const impactB = getImpactScore(deps, b.id);
+      if (impactA !== impactB) return impactB - impactA;
       return a.id.localeCompare(b.id);
     });
 
@@ -590,6 +624,37 @@ export class Tracker {
     }
 
     await writeIndex(trackerDir, updatedIndex);
+
+    // ── Auto-resolution: resolve active blockages when issue → done/closed ──
+    if (params.status !== undefined && params.status !== oldStatus) {
+      if (params.status === "done" || params.status === "closed") {
+        const deps = await readDependencies(trackerDir);
+        const activeBlocks = (deps.blocks[id] ?? []).filter((e) => e.status === "active");
+
+        if (activeBlocks.length > 0) {
+          let updatedDeps = deps;
+          for (const entry of activeBlocks) {
+            updatedDeps = resolveBlockage(updatedDeps, entry.blockedId, entry.blockerId);
+
+            const blockedEntry = findEntry(updatedIndex, entry.blockedId);
+            if (blockedEntry) {
+              const now = new Date().toISOString();
+              const resolveEvent: Event = {
+                type: "blockage-resolved",
+                timestamp: now,
+                author: "system",
+                content: {
+                  blockerId: id,
+                  reason: `Blocker issue ${id} transitioned to ${params.status}`,
+                },
+              };
+              await appendEvent(join(trackerDir, blockedEntry.path), resolveEvent);
+            }
+          }
+          await writeDependencies(trackerDir, updatedDeps);
+        }
+      }
+    }
 
     return { result: "OK" };
   }
@@ -864,6 +929,245 @@ export class Tracker {
 
     const events = await replayEvents(issueFilePath);
     return computeComments(events);
+  }
+
+  // ─── Blockages ────────────────────────────────────────────────────
+
+  /**
+   * Add blockage dependencies to an issue.
+   * Batch atomic: if any blocker would create a cycle, the entire batch is rejected.
+   */
+  async blockagesAdd(blockedId: IssueId, params: BlockagesAddParams): Promise<BlockagesAddResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
+    const index = await readIndex(trackerDir);
+
+    // Validate blockedId exists
+    if (!findEntry(index, blockedId)) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${blockedId} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    // Validate all blockerIds exist
+    for (const blockerId of params.blockerIds) {
+      if (!findEntry(index, blockerId)) {
+        throw new TrackgenticError(
+          ErrorCodes.NOT_FOUND.result,
+          `Issue ${blockerId} not found in index.`,
+          ErrorCodes.NOT_FOUND.exitCode,
+        );
+      }
+    }
+
+    const deps = await readDependencies(trackerDir);
+
+    // Projected state: deep clone and validate cycle for each blocker
+    let projected = {
+      blockedBy: { ...deps.blockedBy },
+      blocks: { ...deps.blocks },
+    };
+
+    for (const blockerId of params.blockerIds) {
+      projected = addBlockage(projected, blockedId, blockerId);
+      if (detectCycle(projected, blockedId, blockerId)) {
+        throw new TrackgenticError(
+          ErrorCodes.BLOCKAGE_CYCLE.result,
+          `Blockage would create a cycle: ${blockedId} → ... → ${blockerId}`,
+          ErrorCodes.BLOCKAGE_CYCLE.exitCode,
+        );
+      }
+    }
+
+    // All passed — write projected state
+    await writeDependencies(trackerDir, projected);
+
+    // Append events to blockedId's issue file
+    const blockedEntry = findEntry(index, blockedId)!;
+    const issueFilePath = join(trackerDir, blockedEntry.path);
+
+    for (const blockerId of params.blockerIds) {
+      const now = new Date().toISOString();
+      const event: Event = {
+        type: "blockage-added",
+        timestamp: now,
+        author,
+        content: { blockerId },
+      };
+      await appendEvent(issueFilePath, event);
+    }
+
+    return { result: "OK" };
+  }
+
+  /**
+   * Resolve blockage dependencies for an issue.
+   */
+  async blockagesResolve(
+    blockedId: IssueId,
+    params: BlockagesResolveParams,
+  ): Promise<BlockagesResolveResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
+    const index = await readIndex(trackerDir);
+
+    if (!findEntry(index, blockedId)) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${blockedId} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    let deps = await readDependencies(trackerDir);
+
+    for (const blockerId of params.blockerIds) {
+      deps = resolveBlockage(deps, blockedId, blockerId);
+    }
+
+    await writeDependencies(trackerDir, deps);
+
+    // Append events
+    const blockedEntry = findEntry(index, blockedId)!;
+    const issueFilePath = join(trackerDir, blockedEntry.path);
+
+    for (const blockerId of params.blockerIds) {
+      const now = new Date().toISOString();
+      const event: Event = {
+        type: "blockage-resolved",
+        timestamp: now,
+        author,
+        content: { blockerId },
+      };
+      await appendEvent(issueFilePath, event);
+    }
+
+    return { result: "OK" };
+  }
+
+  /**
+   * Delete blockage dependencies for an issue.
+   */
+  async blockagesDelete(
+    blockedId: IssueId,
+    params: BlockagesDeleteParams,
+  ): Promise<BlockagesDeleteResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
+    const index = await readIndex(trackerDir);
+
+    if (!findEntry(index, blockedId)) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${blockedId} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    let deps = await readDependencies(trackerDir);
+
+    for (const blockerId of params.blockerIds) {
+      deps = deleteBlockage(deps, blockedId, blockerId);
+    }
+
+    await writeDependencies(trackerDir, deps);
+
+    // Append events
+    const blockedEntry = findEntry(index, blockedId)!;
+    const issueFilePath = join(trackerDir, blockedEntry.path);
+
+    for (const blockerId of params.blockerIds) {
+      const now = new Date().toISOString();
+      const event: Event = {
+        type: "blockage-deleted",
+        timestamp: now,
+        author,
+        content: { blockerId },
+      };
+      await appendEvent(issueFilePath, event);
+    }
+
+    return { result: "OK" };
+  }
+
+  /**
+   * List all blockage info for an issue.
+   */
+  async blockagesList(id: IssueId): Promise<BlockagesListResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
+    const index = await readIndex(trackerDir);
+
+    if (!findEntry(index, id)) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_FOUND.result,
+        `Issue ${id} not found in index.`,
+        ErrorCodes.NOT_FOUND.exitCode,
+      );
+    }
+
+    const deps = await readDependencies(trackerDir);
+
+    return {
+      issueId: id,
+      blockedBy: deps.blockedBy[id] ?? [],
+      blocks: deps.blocks[id] ?? [],
+    };
   }
 
   // ─── User Management ──────────────────────────────────────────────
