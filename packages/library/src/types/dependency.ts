@@ -15,7 +15,7 @@ export interface BlockageEntry {
  */
 export interface DependenciesFile {
   blockedBy: Record<IssueId, BlockageEntry[]>; // what blocks me
-  blocks: Record<IssueId, BlockageEntry[]>;    // what I block
+  blocks: Record<IssueId, BlockageEntry[]>; // what I block
 }
 
 /**

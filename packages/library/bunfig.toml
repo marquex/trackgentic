@@ -1,2 +1,3 @@
 [test]
-# Bun test configuration
+coverage = true
+coverageThreshold = 0

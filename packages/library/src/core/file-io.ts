@@ -1,6 +1,6 @@
-import { readFile, writeFile, rename } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
+import { readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 /**
  * Read and parse a JSON file.
@@ -22,7 +22,7 @@ export async function atomicWriteJSON(filePath: string, data: unknown): Promise<
 
   const tmpPath = join(dir, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   try {
-    await writeFile(tmpPath, JSON.stringify(data, null, 2) + "\n", "utf-8");
+    await writeFile(tmpPath, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
     await rename(tmpPath, filePath);
   } catch (err) {
     // Clean up temp file if rename fails

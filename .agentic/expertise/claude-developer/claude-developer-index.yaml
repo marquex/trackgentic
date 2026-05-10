@@ -22,7 +22,7 @@ architecture:
         model: opus
         description: Chief Technology Officer — designs architecture, generates specs, tracks development alignment
         access: [.agentic/expertise/cto/**, ./**]
-        subordinates: [library-developer]
+        subordinates: [library-developer, library-quality]
         skills: [agent-expertise, delegate]
         hooks: [enforce-agent-access.ts]
       - name: library-developer
@@ -33,7 +33,19 @@ architecture:
         skills: [agent-expertise]
         hooks: [enforce-agent-access.ts]
         manager: cto
-    notes: hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well. Second hire (library-developer) went smoothly — user provided complete info upfront, only changed model from sonnet to opus.
+      - name: library-quality
+        model: opus
+        description: Library quality engineer — generates tests, verifies code quality, produces documentation for the library
+        access: [.agentic/expertise/library-quality/**, packages/library/**, .agentic/specs/**]
+        subordinates: none
+        skills: [agent-expertise]
+        hooks: [enforce-agent-access.ts]
+        manager: cto
+    notes: |
+      hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well.
+      Second hire (library-developer) went smoothly — user provided complete info upfront, only changed model from sonnet to opus.
+      Third hire (library-quality) — user again provided complete info upfront, changed model from sonnet to opus. This agent needs Write/Edit tools (creates test files and docs).
+      CTO now has two subordinates — adding the second was simple since delegate skill and Delegation section already existed, just needed subordinates list update in frontmatter.
 
   skills:
     path: .claude/skills/
@@ -116,6 +128,8 @@ patterns:
   - Users often override the default model (sonnet) — always present model in confirmation summary so it's visible and adjustable
   - Second hire (library-developer) — user provided all info upfront in a single description; only change was model (sonnet → opus). When user gives complete info, skip directly to confirmation step.
   - When adding first subordinate to a manager: add delegate skill, add subordinates list, add Delegation section with SUBORDINATES marker before Restricted domain section
+  - When adding subsequent subordinates to a manager that already has delegate skill and Delegation section: just add to subordinates list in frontmatter — no structural changes needed
+  - Agents that create files (tests, docs) need Write/Edit in their tools list — most expert agents are read-only but quality/doc agents are exceptions
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime

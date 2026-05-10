@@ -1,14 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { Tracker } from "../../src/core/tracker";
 
 describe("Tracker", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `trackgentic-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    testDir = join(
+      tmpdir(),
+      `trackgentic-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    );
   });
 
   afterEach(() => {
@@ -30,7 +33,9 @@ describe("Tracker", () => {
       expect(existsSync(join(testDir, ".trackgentic", "issues"))).toBe(true);
 
       // Verify config.json
-      const config = JSON.parse(readFileSync(join(testDir, ".trackgentic", "config.json"), "utf-8"));
+      const config = JSON.parse(
+        readFileSync(join(testDir, ".trackgentic", "config.json"), "utf-8"),
+      );
       expect(config).toEqual({
         auth: {
           mode: "read-only",
@@ -47,7 +52,9 @@ describe("Tracker", () => {
       });
 
       // Verify dependencies.json
-      const deps = JSON.parse(readFileSync(join(testDir, ".trackgentic", "dependencies.json"), "utf-8"));
+      const deps = JSON.parse(
+        readFileSync(join(testDir, ".trackgentic", "dependencies.json"), "utf-8"),
+      );
       expect(deps).toEqual({
         blockedBy: {},
         blocks: {},
@@ -92,7 +99,9 @@ describe("Tracker", () => {
       const tracker = new Tracker(testDir);
       await tracker.init();
 
-      const config = JSON.parse(readFileSync(join(testDir, ".trackgentic", "config.json"), "utf-8"));
+      const config = JSON.parse(
+        readFileSync(join(testDir, ".trackgentic", "config.json"), "utf-8"),
+      );
       expect(config.auth.mode).toBe("read-only");
       expect(config.auth.defaultUser).toBe("anonymous");
     });

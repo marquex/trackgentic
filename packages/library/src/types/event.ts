@@ -1,11 +1,11 @@
-import type { IssueId, CommentId, IssueProperties } from "./issue";
+import type { CommentId, IssueId, IssueProperties } from "./issue";
 
 /**
  * Base shape for all events.
  */
 export interface BaseEvent {
   timestamp: string; // ISO 8601
-  author: string;    // resolved user name or "system"
+  author: string; // resolved user name or "system"
 }
 
 /**
@@ -20,7 +20,12 @@ export interface CreationEvent extends BaseEvent {
  */
 export interface UpdateEvent extends BaseEvent {
   type: "update";
-  content: Partial<Pick<IssueProperties, "title" | "description" | "status" | "assignee" | "tags" | "priority" | "parentId">> & {
+  content: Partial<
+    Pick<
+      IssueProperties,
+      "title" | "description" | "status" | "assignee" | "tags" | "priority" | "parentId"
+    >
+  > & {
     reason?: string; // for system auto-promotion events
   };
 }

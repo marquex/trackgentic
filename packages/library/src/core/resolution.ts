@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { join, resolve, dirname } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const TRACKGENTIC_DIR = ".trackgentic";
 

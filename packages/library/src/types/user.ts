@@ -2,9 +2,9 @@
  * A single registered user.
  */
 export interface UserEntry {
-  name: string;           // stored lowercase
-  token: string;          // format: tk_ + 8 random alphanumeric chars
-  registeredAt: string;   // ISO 8601
+  name: string; // stored lowercase
+  token: string; // format: tk_ + 8 random alphanumeric chars
+  registeredAt: string; // ISO 8601
 }
 
 /**

@@ -8,6 +8,7 @@ skills:
   - delegate
 subordinates:
   - library-developer
+  - library-quality
 access:
   - path: .agentic/expertise/cto/**
     permissions: [read, write, delete]

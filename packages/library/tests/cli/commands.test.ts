@@ -1,14 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { rmSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { spawn } from "bun";
 
 describe("CLI commands", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `trackgentic-cli-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    testDir = join(
+      tmpdir(),
+      `trackgentic-cli-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    );
     mkdirSync(testDir, { recursive: true });
   });
 

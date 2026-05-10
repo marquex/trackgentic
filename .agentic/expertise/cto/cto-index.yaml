@@ -5,17 +5,18 @@
 hierarchy:
   manager: none — top-level agent
   subordinates:
-    planned:
-      - library-developer (to be hired for implementation)
+    active:
+      - library-developer (implementation)
+      - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Monorepo scaffold complete. packages/** access rule added. Root and library config files created, dependencies installed, directory structure in place. Ready for Phase 1 implementation."
+expertise_status: "Phase 1 complete. Quality plan fully implemented: Biome linting (zero errors), TypeScript strict+4 extra flags (zero errors), Bun tests (18 pass, 433 assertions, 88.91% coverage), TypeDoc (parses cleanly). Test helpers and directory structure created. All quality gates passing. Ready to delegate Phase 2."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: monorepo scaffold complete
+  stage: Phase 1 complete, quality tooling operational (Biome + TypeDoc + strict TS), ready for Phase 2
   bun_version: "1.3.11"
 
 detail_files:
@@ -39,6 +40,8 @@ specifications:
       description: Every CLI command with args, flags, auth, output format, error handling
     - path: 05-implementation-phases.md
       description: 7 phases from foundation to polish, with tasks, tests, and exit criteria per phase
+    - path: 06-quality-plan.md
+      description: Linting (Biome), typechecking (strict+), testing (Bun), test organization, code review checklist, documentation (TypeDoc), quality gates
 
 docs_absorbed:
   - docs/introduction.md — project vision, file structure, issue properties, CLI overview, config
@@ -75,3 +78,12 @@ session_log:
   - session: 9
     date: "2026-05-10"
     summary: "User hired library-developer subordinate. CTO permissions removed from packages/library. Delegated Phase 1 (Foundation) to library-developer. Phase 1 completed successfully: all types, core modules (errors, id, resolution, file-io, tracker.init), CLI runner with init command, barrel exports. 18 tests, 432 assertions, typecheck clean. Ready for Phase 2."
+  - session: 10
+    date: "2026-05-10"
+    summary: "User hired library-quality subordinate. Created quality plan specification (06-quality-plan.md): Biome for linting, strict TypeScript with extra flags, Bun test runner with coverage thresholds, test file organization (core/cli/integration/helpers), code review checklist, TypeDoc for documentation with typedoc-plugin-markdown. Defined documentation update process triggered by code changes. Updated expertise index with new subordinate."
+  - session: 11
+    date: "2026-05-10"
+    summary: "Onboarded library-quality. Delegated quality plan implementation: install Biome/TypeDoc, create biome.json/typedoc.json configs, update bunfig.toml for coverage, add strict TS flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, etc.), restructure test dirs (cli/commands/, integration/, helpers/), run all quality gates. Task running in background, awaiting results."
+  - session: 12
+    date: "2026-05-10"
+    summary: "library-quality completed quality plan implementation. All gates pass: typecheck (zero errors with 4 extra strict flags), lint (zero errors after Biome auto-fixes for import ordering, template literals, null checks), tests (18 pass, 433 assertions, 88.91% coverage), docs:check (TypeDoc parses cleanly). Verified with bun run quality. Ready for Phase 2."

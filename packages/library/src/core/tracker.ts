@@ -1,6 +1,6 @@
-import { resolve, join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
-import type { InitResult, ConfigFile, IndexFile, DependenciesFile, UsersFile } from "../types";
+import { join, resolve } from "node:path";
+import type { ConfigFile, DependenciesFile, IndexFile, InitResult, UsersFile } from "../types";
 import { atomicWriteJSON } from "./file-io";
 
 const TRACKGENTIC_DIR = ".trackgentic";

@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
-import { generateId, generateCommentId } from "../../src/core/id";
+import { describe, expect, test } from "bun:test";
+import { generateCommentId, generateId } from "../../src/core/id";
 
 describe("generateId", () => {
   test("generates IDs that are exactly 10 characters", () => {

@@ -1,14 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { resolveTrackerDir } from "../../src/core/resolution";
 
 describe("resolveTrackerDir", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `trackgentic-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    testDir = join(
+      tmpdir(),
+      `trackgentic-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    );
     mkdirSync(testDir, { recursive: true });
   });
 
@@ -46,6 +49,9 @@ describe("resolveTrackerDir", () => {
 
     const result = resolveTrackerDir(testDir);
     expect(result).not.toBeNull();
-    expect(resolve(result!)).toBe(resolve(trackerDir));
+    expect(result).toBeDefined();
+    if (result !== null) {
+      expect(resolve(result)).toBe(resolve(trackerDir));
+    }
   });
 });

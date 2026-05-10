@@ -1,6 +1,6 @@
-import { Tracker } from "../../core/tracker";
 import { TrackgenticError } from "../../core/errors";
-import { writeStdout, writeStderr } from "../output";
+import { Tracker } from "../../core/tracker";
+import { writeStderr, writeStdout } from "../output";
 
 /**
  * Handler for the `trackgentic init` command.

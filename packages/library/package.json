@@ -13,7 +13,15 @@
   },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "test:coverage": "bun test --coverage",
+    "test:watch": "bun test --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --fix src/ tests/",
+    "format": "biome format --write src/ tests/",
+    "docs:generate": "typedoc",
+    "docs:check": "typedoc --emit none",
+    "quality": "bun run typecheck && bun run lint && bun run test:coverage"
   },
   "files": [
     "src/"
@@ -25,7 +33,10 @@
     "commander": "^13.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "@types/bun": "^1.2.0"
+    "@biomejs/biome": "^2.4.15",
+    "@types/bun": "^1.2.0",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typescript": "^5.7.0"
   }
 }

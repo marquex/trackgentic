@@ -32,9 +32,9 @@ export interface IssueProperties {
  * Full computed state of an issue, including computed fields.
  */
 export interface ComputedIssue extends IssueProperties {
-  createdAt: string;   // ISO 8601 — timestamp of creation event
-  createdBy: string;   // author of creation event
-  updatedAt: string;   // ISO 8601 — timestamp of last event
+  createdAt: string; // ISO 8601 — timestamp of creation event
+  createdBy: string; // author of creation event
+  updatedAt: string; // ISO 8601 — timestamp of last event
 }
 
 /**
@@ -44,6 +44,6 @@ export interface ComputedComment {
   id: CommentId;
   author: string;
   content: string;
-  timestamp: string;       // ISO 8601 — when the comment was created
+  timestamp: string; // ISO 8601 — when the comment was created
   editedAt: string | null; // ISO 8601 — when last comment-update was applied, or null
 }

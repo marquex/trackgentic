@@ -1,79 +1,72 @@
 // Issue-related types
-export type {
-  IssueId,
-  CommentId,
-  IssueStatus,
-  IssueProperties,
-  ComputedIssue,
-  ComputedComment,
-} from "./issue";
 
+// API types
+export type {
+  BlockagesAddParams,
+  BlockagesAddResult,
+  BlockagesDeleteParams,
+  BlockagesDeleteResult,
+  BlockagesListResult,
+  BlockagesResolveParams,
+  BlockagesResolveResult,
+  CommentAddParams,
+  CommentAddResult,
+  CommentDeleteParams,
+  CommentDeleteResult,
+  CommentsListResult,
+  CommentUpdateParams,
+  CommentUpdateResult,
+  CreateParams,
+  CreateResult,
+  HistoryResult,
+  InitResult,
+  ListParams,
+  ListResult,
+  UpdateParams,
+  UpdateResult,
+  UsersListResult,
+  UsersRegenerateResult,
+  UsersRegisterResult,
+  UsersRevokeResult,
+  ViewResult,
+} from "./api";
+// Config types
+export type { ConfigFile } from "./config";
+// Dependency types
+export type {
+  BlockageEntry,
+  BlockageInfo,
+  DependenciesFile,
+} from "./dependency";
 // Event types
 export type {
   BaseEvent,
-  Event,
-  CreationEvent,
-  UpdateEvent,
+  BlockageAddedEvent,
+  BlockageDeletedEvent,
+  BlockageResolvedEvent,
+  CommentDeleteEvent,
   CommentEvent,
   CommentUpdateEvent,
-  CommentDeleteEvent,
-  BlockageAddedEvent,
-  BlockageResolvedEvent,
-  BlockageDeletedEvent,
+  CreationEvent,
+  Event,
+  UpdateEvent,
 } from "./event";
-
 // Index file types
 export type {
   IndexEntry,
   IndexFile,
 } from "./index-file";
-
-// Dependency types
 export type {
-  BlockageEntry,
-  DependenciesFile,
-  BlockageInfo,
-} from "./dependency";
-
+  CommentId,
+  ComputedComment,
+  ComputedIssue,
+  IssueId,
+  IssueProperties,
+  IssueStatus,
+} from "./issue";
 // User types
 export type {
   UserEntry,
-  UsersFile,
   UserInfo,
+  UsersFile,
 } from "./user";
-
-// Config types
-export type {
-  ConfigFile,
-} from "./config";
-
-// API types
-export type {
-  InitResult,
-  CreateParams,
-  CreateResult,
-  UpdateParams,
-  UpdateResult,
-  ListParams,
-  ListResult,
-  ViewResult,
-  HistoryResult,
-  CommentAddParams,
-  CommentAddResult,
-  CommentUpdateParams,
-  CommentUpdateResult,
-  CommentDeleteParams,
-  CommentDeleteResult,
-  CommentsListResult,
-  BlockagesAddParams,
-  BlockagesAddResult,
-  BlockagesResolveParams,
-  BlockagesResolveResult,
-  BlockagesDeleteParams,
-  BlockagesDeleteResult,
-  BlockagesListResult,
-  UsersRegisterResult,
-  UsersListResult,
-  UsersRevokeResult,
-  UsersRegenerateResult,
-} from "./api";

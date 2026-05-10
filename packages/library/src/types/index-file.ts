@@ -6,7 +6,7 @@ import type { IssueId, IssueStatus } from "./issue";
 export interface IndexEntry {
   id: IssueId;
   title: string;
-  path: string;             // relative path to issue file
+  path: string; // relative path to issue file
   status: IssueStatus;
   assignee: string | null;
   parentId: IssueId | null;

@@ -1,4 +1,4 @@
-import type { IssueId, CommentId } from "../types";
+import type { CommentId, IssueId } from "../types";
 
 /**
  * Generate a unique issue ID.
