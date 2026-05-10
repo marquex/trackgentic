@@ -1,0 +1,154 @@
+# Architecture Knowledge
+# The complete technical architecture of trackgentic as designed in the docs.
+
+storage_model:
+  type: file-backed JSON (no database)
+  location: .trackgentic/ directory, discovered by walking up from cwd
+  rationale: git-commitable, merge-friendly, zero infrastructure, monorepo-compatible
+
+file_layout:
+  config_json:
+    path: .trackgentic/config.json
+    contents: auth mode (open/read-only/strict), defaultUser setting
+    created_by: init command
+    mutable: true (manual edit)
+
+  index_json:
+    path: .trackgentic/index.json
+    structure:
+      open: "sorted array of issue summaries (by id, which is time-sortable)"
+      closed: "sorted array of issue summaries (by id)"
+      childrenOf: "map of parentId -> childId[] for O(1) child lookups"
+    index_entry_fields:
+      - id (10-char: 6 from timestamp base36 + 4 random base36)
+      - title
+      - path (relative path to issue file)
+      - status (idea/todo/in-progress/done/closed)
+      - assignee
+      - parentId (nullable)
+      - tags (string array)
+      - priority (1-5, default 3)
+    sorted: true — enables binary search O(log n) by id
+    maintained_by: create, update, delete commands
+
+  issues_directory:
+    path: .trackgentic/issues/
+    pattern: one JSON file per issue named [issue_id].json
+    contents: append-only array of events
+
+  dependencies_json:
+    path: .trackgentic/dependencies.json
+    structure:
+      blockedBy: "map of issueId -> [{blockerId, status}]"
+      blocks: "map of issueId -> [{blockedId, status}]"
+    invariant: both maps always in sync — mutations write both atomically
+    blockage_statuses: [active, resolved]
+
+  users_json:
+    path: .trackgentic/users.json
+    structure: "array of {name, token, registeredAt}"
+    token_format: "tk_ prefix + 8 random alphanumeric chars"
+
+event_model:
+  type: append-only event log per issue
+  event_shape:
+    timestamp: "ISO 8601 datetime"
+    type: "creation | update | comment | comment-update | comment-delete | blockage-added | blockage-resolved | blockage-deleted"
+    author: "resolved user name (from token) or 'system' for auto-generated events"
+    content: "object with changed fields (varies by event type)"
+
+  event_types:
+    creation: "marks issue existence — no content properties, just the marker"
+    update: "content has changed fields: title, description, status, assignee, tags, priority, parentId"
+    comment: "content has {id, content} — comment id generated at creation"
+    comment-update: "content has {id, content} — overrides original comment content"
+    comment-delete: "content has {id} — soft-delete, excluded from computed state"
+    blockage-added: "content has {blockerId}"
+    blockage-resolved: "content has {blockerId}"
+    blockage-deleted: "content has {blockerId} — removes from index entirely"
+
+  state_reconstruction: "replay all events in order; update events set fields, comments are CRUD via events"
+
+issue_properties:
+  id: "10-char string (6 timestamp base36 + 4 random base36), sortable by creation time"
+  title: string
+  description: string
+  status: "idea -> todo -> in-progress -> done -> closed"
+  assignee: "string or null"
+  parentId: "issue id or null"
+  tags: "string array"
+  priority: "integer 1-5, default 3"
+  computed_fields:
+    createdAt: "timestamp of creation event"
+    createdBy: "author of creation event"
+    updatedAt: "timestamp of last event"
+
+hierarchy:
+  structure: tree (infinite nesting via parentId)
+  children_index: childrenOf map in index.json for O(1) child lookups
+  upward_constraints:
+    - "parent cannot be done/closed if children are not done/closed"
+    - "child advancing past parent auto-promotes parent (system-authored update event)"
+  downward_constraints:
+    - "children cannot be created under or reparented to a closed parent"
+    - "closing parent auto-closes all done children (cascades through subtree)"
+    - "non-done children block parent closure"
+  allowed_without_restriction:
+    - "children under idea parent"
+    - "children under done parent (upward constraint will handle promotion)"
+
+blockages:
+  storage: dependencies.json (separate from index to reduce conflict surface)
+  bidirectional_maps: blockedBy (what blocks me) and blocks (what I block)
+  lifecycle: added -> active | resolved (manual or automatic) | deleted (removes from index)
+  auto_resolution: "issue transitioning to done/closed auto-resolves its active blocks entries"
+  cycle_detection: "walk blockedBy graph transitively from proposed blocker; reject if cycle found"
+  batch_atomicity: "all cycle checks validated against projected state before any write"
+  impact_score: "count of active entries in blocks[issueId] — used for priority tiebreaking"
+
+sort_order:
+  list_default: "priority ASC (1 first) -> impact score DESC (most unblocking) -> createdAt ASC (oldest)"
+
+resolution_algorithm:
+  description: "walk up from cwd looking for .trackgentic/ directory"
+  supports: "multiple trackers in same repo (monorepo support)"
+  fallback: "error NOT_INITIALIZED if not found, suggest running trackgentic init"
+
+cli_interface:
+  format: "trackgentic [subcommand] [args] [flags]"
+  output: "JSON to stdout, errors to stderr with non-zero exit code"
+  auth: "token via TRACKGENTIC_USER_TOKEN env var"
+
+  commands:
+    init: "create .trackgentic/ with config.json, index.json, dependencies.json, users.json, issues/"
+    create: "new issue with title + flags (description, assignee, tags, status, priority, parentId, path)"
+    update: "modify issue by id + flags (title, description, status, assignee, tags, priority, parentId)"
+    list: "filter by status/assignee/tags/parentId from index (no issue file reads)"
+    view: "computed state of single issue (replay events)"
+    history: "raw event log of single issue"
+    comments_add: "append comment event to issue"
+    comments_update: "append comment-update event"
+    comments_delete: "append comment-delete event"
+    comments_list: "replay comment events for computed state"
+    blockages_add: "create blockage(s), atomic batch, cycle check"
+    blockages_resolve: "mark blockage(s) as resolved"
+    blockages_delete: "remove blockage(s) from index, append delete event"
+    blockages_list: "show both blockedBy and blocks for an issue"
+    users_register: "create user with name, return token"
+    users_list: "show registered users (no tokens)"
+    users_revoke: "remove user (requires auth)"
+    users_regenerate: "new token for user (requires own token)"
+
+auth_system:
+  modes:
+    open: "no token required, unauthenticated writes attributed to defaultUser"
+    read_only: "reads free, writes require token (default mode)"
+    strict: "all commands require token"
+  token_passing: TRACKGENTIC_USER_TOKEN environment variable
+  author_in_events: "every mutating event includes author from resolved token"
+
+error_codes:
+  global: [NOT_INITIALIZED, TOKEN_REQUIRED, INVALID_TOKEN, DEFAULT_USER_MISSING]
+  issue: [NOT_FOUND, ISSUE_MISSING]
+  comment: [COMMENT_NOT_FOUND]
+  auth: [USER_ALREADY_EXISTS, USER_NOT_FOUND]

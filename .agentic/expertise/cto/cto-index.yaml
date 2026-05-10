@@ -1,0 +1,42 @@
+# CTO Expertise Index
+# Agent: cto
+# Domain: Project architecture, technical specifications, development alignment
+
+hierarchy:
+  manager: none — top-level agent
+  subordinates: none — leaf agent
+
+expertise_status: "Initialized — project docs fully absorbed, architecture understood, ready to spec and guide."
+
+project_overview:
+  name: trackgentic
+  type: npm library (TypeScript, Bun runtime)
+  purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
+  distribution: npm package with CLI entry point (`trackgentic` command)
+  stage: pre-implementation (docs and agentic infra only, no source code yet)
+
+detail_files:
+  - path: architecture.yaml
+    description: Core data model, file structure, event sourcing, resolution algorithm, index design
+  - path: design-decisions.yaml
+    description: Architectural decisions and rationale (why file-backed, why event-sourced, etc.)
+  - path: status.yaml
+    description: Current project status, implementation roadmap, open questions, risks
+
+docs_absorbed:
+  - docs/introduction.md — project vision, file structure, issue properties, CLI overview, config
+  - docs/hierarchy.md — parent-child tree, childrenOf map, status constraints, auto-promotion
+  - docs/commands.md — full CLI reference: init, create, update, list, view, history, comments, blockages
+  - docs/issue-blockages.md — dependency index, blockage lifecycle, cycle detection, impact scoring
+  - docs/user-auth.md — token-based auth, user registry, auth modes (open/read-only/strict)
+
+session_log:
+  - session: 1
+    date: "2026-05-10"
+    summary: "Read all docs, built full understanding of architecture. Could not write expertise files (missing Write/Edit tools). Requested tool update."
+  - session: 2
+    date: "2026-05-10"
+    summary: "Created all 4 expertise files after Write/Edit tools were added. Validated YAML. Expertise fully initialized."
+  - session: 3
+    date: "2026-05-10"
+    summary: "Confirmed expertise is current. No new knowledge gained this session — existing files cover all project docs and architecture."

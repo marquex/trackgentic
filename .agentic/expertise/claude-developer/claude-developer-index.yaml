@@ -18,7 +18,14 @@ architecture:
         access: [.claude/**, .agentic/specs/engineering/**, .agentic/expertise/**]
         subordinates: none
         skills: [claude-developing, agent-expertise]
-    notes: Only one project agent currently. hire-expert skill available to create more.
+      - name: cto
+        model: opus
+        description: Chief Technology Officer — designs architecture, generates specs, tracks development alignment
+        access: [.agentic/expertise/cto/**, ./**]
+        subordinates: none
+        skills: [agent-expertise]
+        hooks: [enforce-agent-access.ts]
+    notes: hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well.
 
   skills:
     path: .claude/skills/
@@ -94,6 +101,13 @@ conventions:
   - Expert agents always get agent-expertise skill and PreToolUse hook for access enforcement
   - Agent hierarchy is a strict tree — delegation flows downward only
 
+patterns:
+  - hire-expert flow: parse user description → identify gaps → ask follow-ups → present summary → await explicit confirmation → create files → validate
+  - For CTO-type roles: start with read-only repo access, add write folders when specs location is decided
+  - Agent creation is multi-step — always confirm before writing files, user may adjust access or hierarchy
+  - Users often override the default model (sonnet) — always present model in confirmation summary so it's visible and adjustable
+  - First agent hired (cto) — the hire-expert skill workflow completed cleanly end-to-end with no issues
+
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
 
@@ -102,3 +116,4 @@ resolved:
 
 open_questions:
   - Does the project have a CLAUDE.md at root level already? (User says no, will generate later)
+  - Where should the CTO write technical specs? (e.g., .agentic/specs/ or elsewhere)

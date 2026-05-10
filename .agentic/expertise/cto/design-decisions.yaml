@@ -1,0 +1,118 @@
+# Design Decisions
+# Key architectural choices made in the docs and their rationale.
+
+decisions:
+  - id: DD-001
+    title: "File-backed storage instead of database"
+    choice: "All data stored as JSON files in .trackgentic/ directory"
+    rationale:
+      - "Zero infrastructure — no database to install, run, or maintain"
+      - "Git-native — entire tracker state is version-controlled alongside code"
+      - "Conflict-resistant — separate files per issue, separate dependency index"
+      - "Agent-friendly — agents can read/write files directly if needed"
+      - "Portable — works in any directory, any repo, any machine"
+    tradeoffs:
+      - "No concurrent write safety beyond file-level (acceptable for agent usage)"
+      - "Scalability limited by file count (acceptable — agent trackers are small)"
+    status: decided
+
+  - id: DD-002
+    title: "Event sourcing for issue state"
+    choice: "Issues are append-only event logs; state computed by replay"
+    rationale:
+      - "Full audit trail — every change is recorded and traceable"
+      - "No data loss — updates never overwrite, only append"
+      - "Git-friendly — append-only means fewer merge conflicts"
+      - "Debuggable — agents can inspect history to understand how an issue evolved"
+    tradeoffs:
+      - "Read performance requires replaying events (mitigated by index for listing)"
+      - "Event files grow over time (acceptable for agent-scale usage)"
+    status: decided
+
+  - id: DD-003
+    title: "Sorted index with binary search"
+    choice: "Index arrays sorted by issue ID (which is time-sortable)"
+    rationale:
+      - "O(log n) lookup by ID without reading issue files"
+      - "ID encodes creation time, so sort is natural and free"
+      - "Efficient listing and filtering from index alone"
+    tradeoffs:
+      - "Insertion requires finding correct position (O(log n) with binary search)"
+      - "Index must be kept in sync with issue files"
+    status: decided
+
+  - id: DD-004
+    title: "Issue ID format: timestamp + random"
+    choice: "Date.now().toString(36).slice(0,6) + Math.random().toString(36).slice(-4)"
+    rationale:
+      - "10 characters — short enough to use in CLI arguments"
+      - "Time-sortable — natural ordering reflects creation order"
+      - "Collision-resistant — 36^4 randomness per millisecond slot"
+      - "Human-readable — easier to work with than UUIDs"
+    tradeoffs:
+      - "Not globally unique like UUID (acceptable for per-repo scope)"
+      - "Timestamp portion leaks creation timing (not a concern here)"
+    status: decided
+
+  - id: DD-005
+    title: "Separate dependency index file"
+    choice: "Blockages in dependencies.json, not in index.json"
+    rationale:
+      - "Reduces git conflict surface — agents modifying blockages don't conflict with those modifying issue metadata"
+      - "Dependency data has different access patterns (bidirectional lookups)"
+      - "Keeps index.json focused on issue metadata"
+    status: decided
+
+  - id: DD-006
+    title: "Directory-walking resolution for .trackgentic/"
+    choice: "Walk up from cwd to find .trackgentic/ folder"
+    rationale:
+      - "Monorepo support — different subdirectories can have independent trackers"
+      - "Familiar pattern (like .git, .eslintrc, tsconfig.json resolution)"
+      - "No configuration needed — just run commands from anywhere in the repo"
+    status: decided
+
+  - id: DD-007
+    title: "Lightweight token auth (not cryptographic)"
+    choice: "Simple tk_ prefixed tokens stored in users.json"
+    rationale:
+      - "Practical attribution, not security — goal is knowing who did what"
+      - "Zero setup — no OAuth, no JWT, no external service"
+      - "Agent-friendly — set env var once per session"
+      - "Configurable strictness — open/read-only/strict modes fit different needs"
+    tradeoffs:
+      - "Not secure against intentional impersonation (by design — not the goal)"
+      - "Tokens stored in plaintext in users.json (acceptable for non-sensitive use)"
+    status: decided
+
+  - id: DD-008
+    title: "Hierarchy status constraint propagation"
+    choice: "Upward auto-promotion + downward cascade with hard blocks"
+    rationale:
+      - "Keeps subtree lifecycle coherent — can't mark parent done with open children"
+      - "Auto-promotion reduces manual bookkeeping — child starting work promotes parent"
+      - "Downward cascade on close is intuitive — closing an epic closes its done stories"
+      - "Hard blocks prevent inconsistent states"
+    tradeoffs:
+      - "Status changes can cascade across multiple files (performance consideration)"
+      - "Complexity in implementation — need to walk tree in both directions"
+    status: decided
+
+  - id: DD-009
+    title: "TypeScript with Bun runtime"
+    choice: "TypeScript source, Bun for runtime and tooling"
+    rationale:
+      - "TypeScript for type safety and good DX in library code"
+      - "Bun for fast execution, native TypeScript support, built-in test runner"
+      - "npm distribution makes it accessible to any Node/Bun project"
+    status: decided
+
+  - id: DD-010
+    title: "CLI as primary interface with JSON output"
+    choice: "All output as JSON to stdout, errors as JSON to stderr"
+    rationale:
+      - "Machine-parseable — agents and scripts can consume output directly"
+      - "No formatting ambiguity — structured data is unambiguous"
+      - "Composable — pipe into jq, other tools, or agent parsers"
+      - "stderr/stdout split allows filtering output from errors"
+    status: decided
