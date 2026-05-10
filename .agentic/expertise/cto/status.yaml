@@ -2,8 +2,8 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: Phase 4 complete — ready for Phase 5 implementation
-  source_code: Phase 1+2+3+4 implemented (event engine, CRUD, auth system, user management, comments lifecycle, CLI comment commands)
+  phase: Phase 5 complete — ready for Phase 6 implementation
+  source_code: Phase 1+2+3+4+5 implemented (event engine, CRUD, auth, comments, hierarchy with upward/downward constraints)
   monorepo_files:
     - package.json (root workspace config)
     - packages/library/package.json (11 scripts, eslint + prettier + typedoc + typescript + @types/bun)
@@ -15,14 +15,14 @@ current_state:
     - bun.lockb (generated)
   dependencies_installed: true
   documentation: complete — all 5 doc files are thorough and implementation-ready
-  specifications: complete — 7 spec files in .agentic/specs/
+  specifications: complete — 8 spec files in .agentic/specs/
   agentic_infra: complete — .claude/ agents, skills, hooks, and expertise system working
   quality_plan:
     spec: .agentic/specs/06-quality-plan.md
     linting: ESLint ^9.28 + typescript-eslint ^8.33 (replaced Biome), zero errors
     formatting: Prettier ^3.5.3 (replaced Biome formatter), zero issues
     typechecking: TypeScript strict + 4 extra flags, zero errors
-    testing: Bun test runner with coverage, 99.22% overall
+    testing: Bun test runner with coverage, 99.31% overall
     documentation: TypeDoc parses cleanly
     status: fully implemented — all quality gates passing
     test_helpers: setup.ts, fixtures.ts, assertions.ts created in tests/helpers/
@@ -106,7 +106,40 @@ current_state:
     quality_notes:
       - library-quality identified and covered auth integration gaps for comment methods
       - All error paths now tested: NOT_FOUND, COMMENT_NOT_FOUND, NOT_INITIALIZED, ISSUE_MISSING, TOKEN_REQUIRED
+  phase_5_results:
+    tests: 284 passing, 1101 assertions, 99.31% coverage (99.77% functions, 99.31% lines)
+    typecheck: clean (strict + 4 extra flags)
+    lint: clean (ESLint, zero errors)
+    format: clean (Prettier, zero issues)
+    docs_check: clean (TypeDoc parses all source)
+    coverage_by_file:
+      hierarchy.ts: 100%/100%
+      index-manager.ts: 100%/100%
+      tracker.ts: 97.96%/100% (Bun coverage artifact)
+      auth.ts: 100%/100%
+      errors.ts: 100%/100%
+      events.ts: 100%/100%
+      file-io.ts: 100%/100%
+      id.ts: 100%/100%
+      resolution.ts: 100%/93.75% (V8 artifact)
+    new_files:
+      core: hierarchy.ts (isStatusAfter, validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions)
+      tests: tests/core/hierarchy.test.ts (22 tests)
+    modified_files:
+      core: index-manager.ts (added addChild, removeChild, getChildren), tracker.ts (hierarchy integration in create + update with downward cascade, upward auto-promotion, reparenting)
+      tests: index-manager.test.ts (+10 tests), tracker.test.ts (+17 tests), commands.test.ts (fixed parent IDs + CLI hierarchy tests)
+    quality_additions:
+      tests_added_by_quality: 12 additional tests (auth integration for hierarchy ops, CLI --parentId tests, edge cases: same status no-op, reparent from null, same parentId no-op, done parent allowed, mixed cascade, already-closed children)
+      total_new_tests_phase5: 68 (56 by developer + 12 by quality)
+    design_decisions:
+      - hierarchy.ts is a pure function module — no I/O, no side effects, easily testable
+      - System-authored events use author "system" with reason field explaining the trigger
+      - Downward cascade (auto-close) is recursive through the subtree
+      - Upward promotion is recursive through ancestors
+      - Only closed parents block new children (done/idea/etc. are allowed)
+      - HIERARCHY_CONSTRAINT (exit code 12) prevents the operation entirely — no partial state changes
   last_updated: "2026-05-10"
+  phase_5_complete_date: "2026-05-10"
   blockers: []
 
 implementation_roadmap:
@@ -133,6 +166,8 @@ implementation_roadmap:
     phase_5_hierarchy:
       description: "childrenOf map, upward auto-promotion, downward cascade, reparenting"
       exit_criteria: "Tree constraints enforced, system-authored events in history"
+      status: complete
+      notes: "68 new tests (56 developer + 12 quality). hierarchy.ts pure function module. Recursive upward promotion + downward cascade."
     phase_6_blockages:
       description: "Dependency maps, cycle detection, batch atomicity, auto-resolution, impact score"
       exit_criteria: "Full blockage lifecycle with cycle detection and auto-resolution"

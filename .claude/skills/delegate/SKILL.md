@@ -21,29 +21,11 @@ For example, to delegate a research task to an agent named `researcher`:
 bun .claude/skills/delegate/scripts/delegate.ts researcher "Analyze the current BTC market trends and provide a summary"
 ```
 
+Delegation can take a long time to complete depending on the complexity of the prompt and the target agent's processing time. Run them in the background when possible and wake up when the response is ready.
+
 ## Important Notes
 
 - The target agent must be defined in `.claude/agents/<agent-name>.md`.
 - The target agent must be listed in the calling agent's `subordinates` frontmatter field. Delegation is enforced at two levels: (1) the `enforce-agent-access` PreToolUse hook denies Bash commands that call `delegate.ts` with an unauthorized target, and (2) the `delegate.ts` script itself checks the calling agent's frontmatter before spawning the child process.
-- The `CRYPLATIVE_SESSION_ID` environment variable is automatically propagated to the child agent, ensuring all agents in a chain share the same session directory.
+- Launch the delegation script as a background process when possible to avoid blocking the parent agent's execution while waiting for the child agent's response.
 - The child agent's response is printed to stdout, which you will see in your context.
-- Both the delegation and the response are logged to `.claude/sessions/<session-id>/_conversation.jsonl`.
-
-## Reading Conversation History
-
-To understand what has happened in the current session, read the conversation log:
-
-```bash
-cat .claude/sessions/$CRYPLATIVE_SESSION_ID/_conversation.jsonl
-```
-
-This file contains all user prompts, delegation and response entries for the session, allowing you to see the full history of inter-agent communication.
-
-Entry types you'll see:
-- **user_prompt**: A prompt submitted by the user in interactive mode (every submission is stored).
-- **initial_prompt**: The first prompt in a print-mode session (e.g., from delegation).
-- **delegation**: When one agent delegates a task to another. Logged both by the delegate skill (explicit `/delegate` calls) and by the session-logger hook for Claude's internal subagent mechanism.
-- **response**: An agent's response (from Stop hook or delegation completion).
-- **subagent_stop**: From Claude's internal subagent mechanism, paired with a `delegation` entry via a shared `delegation_id`.
-
-For full details on the script API, entry format, and environment variables, see the [reference documentation](scripts/reference.md).

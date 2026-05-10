@@ -12,6 +12,7 @@ import type {
   CreateParams,
   CreateResult,
   DependenciesFile,
+  Event,
   HistoryResult,
   IndexEntry,
   IndexFile,
@@ -36,8 +37,23 @@ import { ErrorCodes, TrackgenticError } from "./errors";
 import { appendEvent, computeComments, computeState, replayEvents } from "./events";
 import { atomicWriteJSON, readJSON } from "./file-io";
 import { generateCommentId, generateId } from "./id";
-import { findEntry, insertEntry, readIndex, updateEntry, writeIndex } from "./index-manager";
+import {
+  addChild,
+  findEntry,
+  getChildren,
+  insertEntry,
+  readIndex,
+  removeChild,
+  updateEntry,
+  writeIndex,
+} from "./index-manager";
 import { resolveTrackerDir } from "./resolution";
+import {
+  computeUpwardPromotions,
+  isStatusAfter,
+  validateNewChild,
+  validateParentStatusChange,
+} from "./hierarchy";
 
 const TRACKGENTIC_DIR = ".trackgentic";
 
@@ -80,6 +96,46 @@ const DEFAULT_USERS: UsersFile = {
  */
 function generateToken(): string {
   return `tk_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Recursively auto-close done children when a parent is closed.
+ * Appends system-authored events to each child's issue file and updates the index.
+ * Returns the updated index.
+ */
+async function cascadeClose(
+  index: IndexFile,
+  issueId: IssueId,
+  trackerDir: string,
+): Promise<IndexFile> {
+  const childIds = getChildren(index, issueId);
+  let currentIndex = index;
+
+  for (const childId of childIds) {
+    const childEntry = findEntry(currentIndex, childId);
+    if (!childEntry || childEntry.status !== "done") continue;
+
+    const now = new Date().toISOString();
+    const event: Event = {
+      type: "update",
+      timestamp: now,
+      author: "system",
+      content: {
+        status: "closed",
+        reason: "auto-closed: parent closed",
+      },
+    };
+
+    const childPath = join(trackerDir, childEntry.path);
+    await appendEvent(childPath, event);
+
+    currentIndex = updateEntry(currentIndex, childId, { status: "closed" });
+
+    // Recursively cascade to the child's own children
+    currentIndex = await cascadeClose(currentIndex, childId, trackerDir);
+  }
+
+  return currentIndex;
 }
 
 /**
@@ -147,6 +203,29 @@ export class Tracker {
     const parentId = params.parentId ?? null;
     const tags = params.tags ?? [];
 
+    // Read index early for parent validation
+    const index = await readIndex(trackerDir);
+
+    // Validate parent exists and is not closed
+    if (parentId) {
+      const parentEntry = findEntry(index, parentId);
+      if (!parentEntry) {
+        throw new TrackgenticError(
+          ErrorCodes.NOT_FOUND.result,
+          "Parent issue not found",
+          ErrorCodes.NOT_FOUND.exitCode,
+        );
+      }
+      const validationError = validateNewChild(parentEntry);
+      if (validationError) {
+        throw new TrackgenticError(
+          ErrorCodes.HIERARCHY_CONSTRAINT.result,
+          validationError,
+          ErrorCodes.HIERARCHY_CONSTRAINT.exitCode,
+        );
+      }
+    }
+
     // Build update content with only non-default values
     const updateContent: Partial<
       Pick<
@@ -185,7 +264,6 @@ export class Tracker {
       priority,
     };
 
-    const index = await readIndex(trackerDir);
     const updatedIndex = insertEntry(index, entry);
     await writeIndex(trackerDir, updatedIndex);
 
@@ -357,6 +435,54 @@ export class Tracker {
       );
     }
 
+    // Save old values for hierarchy handling
+    const oldStatus = entry.status;
+    const oldParentId = entry.parentId;
+
+    // ── Hierarchy validation (before any state changes) ────────────
+
+    // Validate downward constraints for status change
+    if (params.status !== undefined && params.status !== oldStatus) {
+      if (params.status === "done" || params.status === "closed") {
+        const childIds = getChildren(index, id);
+        const childEntries = childIds
+          .map((cid) => findEntry(index, cid))
+          .filter((e): e is IndexEntry => e !== null);
+        const validationError = validateParentStatusChange(index, childEntries, params.status);
+        if (validationError) {
+          throw new TrackgenticError(
+            ErrorCodes.HIERARCHY_CONSTRAINT.result,
+            validationError,
+            ErrorCodes.HIERARCHY_CONSTRAINT.exitCode,
+          );
+        }
+      }
+    }
+
+    // Validate reparenting constraints
+    if (params.parentId !== undefined && params.parentId !== oldParentId) {
+      if (params.parentId !== null) {
+        const newParentEntry = findEntry(index, params.parentId);
+        if (!newParentEntry) {
+          throw new TrackgenticError(
+            ErrorCodes.NOT_FOUND.result,
+            "Parent issue not found",
+            ErrorCodes.NOT_FOUND.exitCode,
+          );
+        }
+        const validationError = validateNewChild(newParentEntry);
+        if (validationError) {
+          throw new TrackgenticError(
+            ErrorCodes.HIERARCHY_CONSTRAINT.result,
+            validationError,
+            ErrorCodes.HIERARCHY_CONSTRAINT.exitCode,
+          );
+        }
+      }
+    }
+
+    // ── Build and append update event ──────────────────────────────
+
     // Build update event content with only the provided fields
     const content: Partial<
       Pick<
@@ -389,7 +515,7 @@ export class Tracker {
     const computed = computeState(events, id);
 
     // Update index entry with new computed values
-    const updatedIndex = updateEntry(index, id, {
+    let updatedIndex = updateEntry(index, id, {
       title: computed.title,
       status: computed.status,
       assignee: computed.assignee,
@@ -397,6 +523,71 @@ export class Tracker {
       tags: computed.tags,
       priority: computed.priority,
     });
+
+    // ── Hierarchy handling (after event append, before index write) ─
+
+    // 1. Handle reparenting (childrenOf updates)
+    if (params.parentId !== undefined && params.parentId !== oldParentId) {
+      // Detach from old parent
+      if (oldParentId !== null) {
+        updatedIndex = removeChild(updatedIndex, oldParentId, id);
+      }
+      // Attach to new parent
+      if (params.parentId !== null) {
+        updatedIndex = addChild(updatedIndex, params.parentId, id);
+
+        // Upward promotion for reparenting: if child's status is past new parent's status
+        const newParentEntry = findEntry(updatedIndex, params.parentId);
+        if (newParentEntry && isStatusAfter(computed.status, newParentEntry.status)) {
+          const promotions = computeUpwardPromotions(
+            updatedIndex,
+            newParentEntry,
+            computed.status,
+            (iid) => findEntry(updatedIndex, iid),
+          );
+          for (const promo of promotions) {
+            const promoEntry = findEntry(updatedIndex, promo.issueId);
+            if (promoEntry && promo.event.type === "update" && promo.event.content.status) {
+              await appendEvent(join(trackerDir, promoEntry.path), promo.event);
+              updatedIndex = updateEntry(updatedIndex, promo.issueId, {
+                status: promo.event.content.status,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Handle status change
+    if (params.status !== undefined && params.status !== oldStatus) {
+      // Downward cascade: auto-close done children when parent closes
+      if (params.status === "closed") {
+        updatedIndex = await cascadeClose(updatedIndex, id, trackerDir);
+      }
+
+      // Upward promotion: promote parent if child advanced past it
+      const currentParentId = computed.parentId;
+      if (currentParentId) {
+        const parentEntry = findEntry(updatedIndex, currentParentId);
+        if (parentEntry && isStatusAfter(params.status, parentEntry.status)) {
+          const promotions = computeUpwardPromotions(
+            updatedIndex,
+            parentEntry,
+            params.status,
+            (iid) => findEntry(updatedIndex, iid),
+          );
+          for (const promo of promotions) {
+            const promoEntry = findEntry(updatedIndex, promo.issueId);
+            if (promoEntry && promo.event.type === "update" && promo.event.content.status) {
+              await appendEvent(join(trackerDir, promoEntry.path), promo.event);
+              updatedIndex = updateEntry(updatedIndex, promo.issueId, {
+                status: promo.event.content.status,
+              });
+            }
+          }
+        }
+      }
+    }
 
     await writeIndex(trackerDir, updatedIndex);
 

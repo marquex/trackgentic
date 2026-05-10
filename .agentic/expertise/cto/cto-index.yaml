@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 4 complete. Comments lifecycle (add/update/delete/list) with computeComments event replay, CLI comment commands. 216 tests, 972 assertions, 99.22% coverage. Quality validated with auth integration + error path tests. All quality gates passing. Ready for Phase 5 (hierarchy)."
+expertise_status: "Phase 5 complete. Issue hierarchy with childrenOf map, upward auto-promotion, downward cascade, reparenting. 284 tests, 1101 assertions, 99.31% coverage. Quality validated with auth integration + edge-case tests. All quality gates passing. Ready for Phase 6 (blockages)."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Phase 4 complete (comments), ready for Phase 5 (hierarchy)
+  stage: Phase 5 complete (hierarchy), ready for Phase 6 (blockages)
   bun_version: "1.3.11"
 
 detail_files:
@@ -46,6 +46,8 @@ specifications:
       description: Phase 3 specification — auth module (resolveAuthor), user CRUD (register/list/revoke/regenerate), auth integration into existing methods, CLI user commands
     - path: 07-phase4-comments-spec.md
       description: Phase 4 specification — computeComments function, 4 Tracker comment methods, CLI comment commands, test plan
+    - path: 08-phase5-hierarchy-spec.md
+      description: Phase 5 specification — childrenOf map management, hierarchy.ts (upward/downward constraints), Tracker create/update integration, reparenting, test plan
 
 access_boundaries:
   rule: "CTO must NOT read or modify files under packages/library/. All code changes go through subordinates."
@@ -66,7 +68,7 @@ delegation_workflow:
   library-developer:
     focus: "Focus delegation messages on the implementation task itself. The agent self-checks typecheck+lint+test before completion."
   library-quality:
-    focus: "Focus delegation messages on what changed and needs validation. The agent runs the full quality gate, generates missing tests, and checks docs automatically."
+    focus: "Always pass the same spec file used for implementation so quality can validate alignment with specs, not just code quality. Include the spec path, what changed, and what behaviors to validate."
 
 docs_absorbed:
   - docs/introduction.md — project vision, file structure, issue properties, CLI overview, config
@@ -148,3 +150,9 @@ session_log:
   - session: 24
     date: "2026-05-10"
     summary: "User noticed library-developer expertise was stale after Phase 4. Delegated expertise update to library-developer. No code changes — expertise maintenance only."
+  - session: 25
+    date: "2026-05-10"
+    summary: "User requested Phase 5 implementation. Created detailed Phase 5 spec (08-phase5-hierarchy-spec.md) covering childrenOf map management, hierarchy constraint module (validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions), Tracker create/update integration with downward cascade + upward auto-promotion + reparenting, HIERARCHY_CONSTRAINT error code. Delegated to library-developer — task running in background. No CLI changes needed (--parentId already supported from Phase 2)."
+  - session: 26
+    date: "2026-05-10"
+    summary: "Phase 5 complete. library-developer implemented: hierarchy.ts (5 pure constraint functions), childrenOf management in index-manager.ts, Tracker create/update integration with downward cascade + upward auto-promotion + reparenting. 56 new tests. library-quality validated: added 12 more tests (auth integration, edge cases, CLI hierarchy). Final: 284 tests, 1101 assertions, 99.31% coverage. All quality gates pass. Updated expertise and status. Ready for Phase 6 (blockages). Also updated delegation workflow: quality agent should always receive the same spec as the developer."

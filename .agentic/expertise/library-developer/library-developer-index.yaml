@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Phase 1-4 complete. 216 tests passing (972 assertions), 99.22% line coverage, typecheck & lint clean."
+expertise_status: "Phase 1-5 complete. 284 tests passing (1101 assertions), 99.31% coverage, typecheck & lint clean."
 
 knowledge:
   project_structure:
@@ -18,6 +18,7 @@ knowledge:
     - "Test helpers in tests/helpers/ (setup.ts, fixtures.ts, assertions.ts)"
     - "Test structure mirrors src: tests/core/, tests/cli/ (no tests/integration/ yet — empty dir)"
     - "dependency-manager.ts still a stub (Phase 6)"
+    - "hierarchy.ts — pure functions for hierarchy validation and status cascade logic"
 
   build_and_run:
     - "Bun runtime — bun test for tests, bun run src/bin.ts for CLI"
@@ -51,10 +52,15 @@ knowledge:
     - "computeComments() in events.ts replays events to produce array of ComputedComment (with content, author, timestamps, deletion status)"
     - "Index manager maintains sorted arrays (open/closed) + childrenOf map for fast lookups"
     - "Index entries updated on create/update; binary search for lookups"
+    - "Index manager has addChild, removeChild, getChildren for childrenOf map management"
     - "Auth: resolveAuthor() checks token -> mode (open/read-only/strict) -> defaultUser fallback"
     - "Auth reads TRACKGENTIC_USER_TOKEN env var; tokens are tk_ + 8 random alphanumeric chars"
     - "Users register is bootstrap (no auth required); list requires read auth; revoke/regenerate require write auth"
     - "Token regeneration is self-service only (caller must be the target user)"
+    - "Hierarchy module (hierarchy.ts): pure functions — isStatusAfter, validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions"
+    - "Issue create() validates parentId: parent must exist, not be closed, child added to childrenOf map"
+    - "Issue update() handles downward cascade (auto-close done children when parent closes), upward auto-promotion (child advancing past parent promotes recursively), reparenting (changing parentId with constraint checks)"
+    - "Status ordering: open < in-progress < done < closed; closed items cannot have children added"
 
   type_system:
     - "All types match spec 02-data-model.md and 03-api-specification.md exactly"
@@ -73,9 +79,9 @@ knowledge:
     - "Tests use createTestDir() from tests/helpers/setup.ts for isolation with cleanup"
     - "CLI tests use Bun.spawn to run bin.ts as subprocess, check stdout/stderr/exitCode"
     - "ID tests verify length (10), format (base36), and uniqueness (100 samples)"
-    - "216 tests across 8 files: auth, events, file-io, id, index-manager, resolution, tracker, CLI commands"
-    - "99.22% line coverage (only resolution.ts has 93.75% — edge cases in walk-up logic)"
-    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker}.test.ts + tests/cli/commands.test.ts"
+    - "284 tests across 9 files: auth, events, file-io, id, index-manager, resolution, tracker, hierarchy, CLI commands"
+    - "99.31% line coverage"
+    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker,hierarchy}.test.ts + tests/cli/commands.test.ts"
 
   cli_commands:
     - "init — no args, creates .trackgentic/ dir"
@@ -98,6 +104,6 @@ knowledge:
     phase_2: "COMPLETE — event engine (events.ts: appendEvent, replayEvents, computeState), index manager (index-manager.ts: binary search, insert/update/find/remove entries), CRUD (create/list/view/update/history), CLI commands for all CRUD operations"
     phase_3: "COMPLETE — auth system (auth.ts: resolveAuthor with open/read-only/strict modes, token validation, env var lookup), user management (usersRegister, usersList, usersRevoke, usersRegenerate), CLI users commands"
     phase_4: "COMPLETE — computeComments() in events.ts (replay comment events into ComputedComment[]), 4 Tracker methods (commentsAdd, commentsUpdate, commentsDelete, commentsList), CLI comments subcommand (src/cli/commands/comments.ts), comments registered in runner.ts. 26 new tests (8 events + 14 tracker + 4 CLI)."
-    phase_5: "NOT STARTED — issue hierarchy"
+    phase_5: "COMPLETE — hierarchy.ts (pure validation/cascade functions: isStatusAfter, validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions), index-manager extended with addChild/removeChild/getChildren, tracker.create() validates parentId, tracker.update() handles downward cascade + upward auto-promotion + reparenting. HIERARCHY_CONSTRAINT error (exit 12). 68 new tests. No CLI changes."
     phase_6: "NOT STARTED — blockages & dependencies (dependency-manager.ts still a stub)"
     phase_7: "NOT STARTED — polish & hardening"

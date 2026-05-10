@@ -90,6 +90,18 @@ hooks:
       hooks:
         - type: command
           command: "bun .claude/hooks/enforce-agent-access.ts"
+  SessionStart:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
+  UserPromptSubmit:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
+  Stop:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
 ---
 
 {System prompt — sets the agent's direction and goals. Should NOT include specific step-by-step instructions. Instead, describe the agent's purpose, what it should aim to achieve, and let the agent learn how to achieve it through its expertise.}
@@ -123,6 +135,7 @@ Key rules for the agent file:
 - Only include `Write` and `Edit` in the `tools` list if the agent needs to write to files outside its expertise folder. Most expert agents only need read access to their domain files.
 - Only include the `delegate` skill if the agent has subordinates.
 - Always include the `PreToolUse` hook for `enforce-agent-access.ts`.
+- Always include the `SessionStart`, `UserPromptSubmit`, and `Stop` hooks for `expertise.hook.ts`. These handle expertise injection at session start and expertise update reminders at session end. The hook uses flag-based dedup so double-firing is safe.
 - Always include the `<!-- ACCESS_RULES -->` marker in the Restricted domain section. The PostToolUse hook `inject-agent-markers.ts` expands it at runtime when the file is read — the marker stays in the file on disk and is never replaced with hardcoded content. The frontmatter `access` block is the single source of truth.
 - Always include the `<!-- SUBORDINATES -->` marker in the Delegation section (only if the agent has subordinates). Handled the same way as ACCESS_RULES — expanded at runtime, never hardcoded.
 - NEVER hardcode the access rules or subordinates list in the system prompt. Always use the markers. The frontmatter is the single source of truth.

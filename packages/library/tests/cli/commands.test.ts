@@ -117,6 +117,48 @@ describe("CLI commands", () => {
       const result = JSON.parse(stderr.trim());
       expect(result.result).toBe("NOT_INITIALIZED");
     });
+
+    test("creates with --parentId flag", async () => {
+      await runCLI("init");
+
+      // Create parent first
+      const parentResult = JSON.parse((await runCLI("create", "Parent")).stdout.trim());
+      const parentId = parentResult.id;
+
+      const { stdout, stderr, exitCode } = await runCLI(
+        "create",
+        "Child Issue",
+        "--parentId",
+        parentId,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.id).toHaveLength(10);
+
+      // Verify child has parentId via view
+      const viewResult = JSON.parse((await runCLI("view", result.id)).stdout.trim());
+      expect(viewResult.parentId).toBe(parentId);
+    });
+
+    test("create with --parentId to closed parent prints HIERARCHY_CONSTRAINT", async () => {
+      await runCLI("init");
+
+      // Create closed parent
+      const parentResult = JSON.parse(
+        (await runCLI("create", "Parent", "--status", "closed")).stdout.trim(),
+      );
+      const parentId = parentResult.id;
+
+      const { stderr, exitCode } = await runCLI("create", "Child", "--parentId", parentId);
+
+      expect(exitCode).toBe(12);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("HIERARCHY_CONSTRAINT");
+    });
   });
 
   describe("list", () => {
@@ -266,8 +308,12 @@ describe("CLI commands", () => {
     test("clears parentId with 'null' string", async () => {
       await runCLI("init");
 
+      // Create parent first (hierarchy validation requires parent to exist)
+      const parentResult = JSON.parse((await runCLI("create", "Parent")).stdout.trim());
+      const parentId = parentResult.id;
+
       const createResult = JSON.parse(
-        (await runCLI("create", "Child", "--parentId", "parent12345")).stdout.trim(),
+        (await runCLI("create", "Child", "--parentId", parentId)).stdout.trim(),
       );
       const issueId = createResult.id;
 

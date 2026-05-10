@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — Phases 1-4 complete. 216 tests, 99.22% line coverage. Prettier + ESLint tooling."
+expertise_status: "Active — Phases 1-5 complete. 284 tests, 1129 assertions, 99.31% line coverage. Prettier + ESLint tooling."
 
 project_phases:
   phase_1_foundation:
@@ -24,48 +24,52 @@ project_phases:
     status: complete
     modules: [events (computeComments), tracker (commentsAdd/commentsUpdate/commentsDelete/commentsList), cli/commands/comments.ts, cli/runner.ts]
     description: "Comment CRUD — add, update, delete, list comments on issues. computeComments() replays events to build comment state. CLI comments subcommands."
-  phase_5_dependency_graph:
-    status: future
-    modules: [dependency-manager.ts — placeholder only]
-  phase_6_workflow_rules:
-    status: planned
+  phase_5_hierarchy:
+    status: complete
+    modules: [hierarchy.ts (106 lines — isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue), index-manager.ts (202 lines — parent/children support), tracker.ts (1025 lines — --parentId on create/update, cascade-close), cli/commands/create.ts, cli/commands/update.ts]
+    description: "Issue hierarchy — parent-child relationships via parentId, status progression constraints (child must not be ahead of parent), cascade-close on parent close, reparenting, done parents allowed. CLI --parentId flag on create and update."
+  phase_6_blockages:
+    status: next
+    description: "Blockage tracking — add/resolve/delete blockages on issues. Error codes BLOCKAGE_CYCLE and HIERARCHY_CONSTRAINT to be implemented."
   phase_7_cli_refinement:
     status: planned
 
 source_layout:
-  total_lines: 2198
-  types: [api.ts (135 lines), event.ts (107), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
-  core: [tracker.ts (835), index-manager.ts (161), events.ts (156), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), dependency-manager.ts (2, placeholder), id.ts (18)]
-  cli: [runner.ts (133), commands/comments.ts (103), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13), bin.ts (5)]
+  total_lines: 2748
+  types: [api.ts (134 lines), event.ts (106), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
+  core: [tracker.ts (1025), index-manager.ts (202), hierarchy.ts (106), events.ts (155), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), dependency-manager.ts (2, placeholder), id.ts (18)]
+  cli: [runner.ts (132), commands/comments.ts (102), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13), bin.ts (5)]
   public_api: "src/index.ts re-exports Tracker class, TrackgenticError, all type and response type aliases"
 
 test_layout:
-  total_tests: 216
-  total_expect_calls: 972
-  total_lines: 3200
-  test_helpers: [helpers/setup.ts (createTestDir, cleanupTestDir), helpers/fixtures.ts (createIssueParams, updateIssueParams), helpers/assertions.ts (expectError, expectOk)]
+  total_tests: 284
+  total_expect_calls: 1129
+  total_lines: 4700
+  test_helpers: [helpers/setup.ts (19 lines — createTestDir, cleanupTestDir), helpers/fixtures.ts (24 lines — createIssueParams, updateIssueParams), helpers/assertions.ts (18 lines — expectError, expectOk)]
   files:
-    core_tracker: { tests: 97, lines: 1700, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration, comments auth integration, comments (add/update/delete/list + error paths)] }
-    cli_commands: { tests: 36, lines: 680, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths] }
-    core_index_manager: { tests: 22, lines: 284, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry] }
-    core_events: { tests: 23, lines: 544, describes: [computeState, appendEvent, replayEvents, computeComments] }
-    core_auth: { tests: 13, lines: 204, describes: [open mode, read-only mode, strict mode, env var fallback] }
+    core_tracker: { tests: ~130, lines: 2319, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration, comments auth integration, comments (add/update/delete/list + error paths), hierarchy (parentId create, parentId update, reparent, cascade-close, status constraints, auth integration for hierarchy, edge cases)] }
+    cli_commands: { tests: ~50, lines: 706, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests] }
+    core_index_manager: { tests: ~30, lines: 366, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry, parent/children index operations] }
+    core_hierarchy: { tests: 30, lines: 304, describes: [isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue] }
+    core_events: { tests: 23, lines: 543, describes: [computeState, appendEvent, replayEvents, computeComments] }
+    core_auth: { tests: 13, lines: 202, describes: [open mode, read-only mode, strict mode, env var fallback] }
     core_id: { tests: 8, lines: 52, describes: [generateId, generateCommentId] }
     core_file_io: { tests: 6, lines: 90, describes: [atomicWriteJSON, readJSON] }
     core_resolution: { tests: 4, lines: 57, describes: [resolveTrackerDir] }
 
 current_coverage:
-  overall_line: 99.22%
-  overall_func: 100.00%
+  overall_line: 99.31%
+  overall_func: 99.77%
   per_file:
-    auth: 100%
-    errors: 100%
-    events: 100%
-    file_io: 100%  # was 61.90% — error paths now tested
-    id: 100%
-    index_manager: 100%
-    resolution: 93.75%  # filesystem root walk-up path untested
-    tracker: 100%
+    auth: 100% / 100%
+    errors: 100% / 100%
+    events: 100% / 100%
+    file_io: 100% / 100%  # was 61.90% — error paths now tested
+    hierarchy: 100% / 100%
+    id: 100% / 100%
+    index_manager: 100% / 100%
+    resolution: 93.75% / 100%  # filesystem root walk-up path untested
+    tracker: 100% / 97.96%  # small function gap — unused static method or similar
 
 tooling:
   formatter: prettier (v3.5.3)
@@ -91,7 +95,7 @@ learnings:
   bun_coverage:
     - "Bun's coverageThreshold in bunfig.toml applies per-file, not just overall."
     - "coverageThreshold=0 means report coverage without failing on per-file thresholds."
-    - "Current coverage: 99.22% line, 100% function across all source files."
+    - "Current coverage: 99.31% line, 99.77% function across all source files."
   typescript:
     - "4 extra strict flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature) are enabled and pass clean."
     - "noPropertyAccessFromIndexSignature requires bracket notation for dynamic keys (e.g. process.env['TRACKGENTIC_USER_TOKEN'])."
@@ -108,7 +112,19 @@ learnings:
     - "auth.test.ts tests resolveAuthor in isolation — doesn't need Tracker instance."
     - "events.test.ts tests computeState, appendEvent, replayEvents, computeComments — pure functions + fs."
     - "resolution.ts has 93.75% coverage — the filesystem-root walk-up edge case (parent === current) is untested."
+    - "Hierarchy tests: pure validation functions in hierarchy.test.ts, integration tests in tracker.test.ts (cascade-close, reparent, status constraints)."
+    - "Auth integration tests for hierarchy: read-only mode blocks create/update with hierarchy ops, tested in tracker.test.ts."
+    - "Edge cases tested: same status no-op on update, reparent from null, same parentId no-op, done parent allowed, mixed cascade (multiple children at different statuses), already-closed children."
   error_handling:
-    - "TrackgenticError carries result code, message, and exitCode. 12 error codes defined."
-    - "ErrorCodes: NOT_INITIALIZED, ALREADY_INITIALIZED, TOKEN_REQUIRED, INVALID_TOKEN, DEFAULT_USER_MISSING, NOT_FOUND, ISSUE_MISSING, COMMENT_NOT_FOUND, USER_ALREADY_EXISTS, USER_NOT_FOUND, INVALID_PARAMS, BLOCKAGE_CYCLE, HIERARCHY_CONSTRAINT."
-    - "Both error codes BLOCKAGE_CYCLE (exit 11) and HIERARCHY_CONSTRAINT (exit 12) are defined but not yet used — Phase 5+."
+    - "TrackgenticError carries result code, message, and exitCode. 13 error codes defined."
+    - "ErrorCodes: NOT_INITIALIZED(1), ALREADY_INITIALIZED(0), TOKEN_REQUIRED(2), INVALID_TOKEN(3), DEFAULT_USER_MISSING(4), NOT_FOUND(5), ISSUE_MISSING(6), COMMENT_NOT_FOUND(7), USER_ALREADY_EXISTS(8), USER_NOT_FOUND(9), INVALID_PARAMS(10), BLOCKAGE_CYCLE(11), HIERARCHY_CONSTRAINT(12)."
+    - "HIERARCHY_CONSTRAINT (exit 12) used in Phase 5 — parent status would constrain child, or parent is closed."
+    - "BLOCKAGE_CYCLE (exit 11) still unused — planned for Phase 6 blockages."
+  phase_5_hierarchy:
+    - "hierarchy.ts exports pure validation functions: isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue."
+    - "index-manager.ts extended to track parentId and children arrays in IndexEntry."
+    - "Cascade-close: when parent transitions to closed, all non-closed children are auto-closed recursively."
+    - "Status progression: idea -> todo -> in-progress -> done -> closed. Child must not be ahead of parent."
+    - "Done parents ARE allowed — the constraint is only on closed parents for new children."
+    - "CLI --parentId flag added to create and update commands."
+    - "Prettier formatting issues found and fixed in test files during quality validation."

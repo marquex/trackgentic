@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { findEntry, insertEntry, removeEntry, updateEntry } from "../../src/core/index-manager";
+import {
+  addChild,
+  findEntry,
+  getChildren,
+  insertEntry,
+  removeChild,
+  removeEntry,
+  updateEntry,
+} from "../../src/core/index-manager";
 import type { IndexEntry, IndexFile } from "../../src/types";
 
 const EMPTY_INDEX: IndexFile = {
@@ -279,6 +287,80 @@ describe("Index Manager", () => {
       expect(index.open).toHaveLength(0);
       expect(index.closed).toHaveLength(1);
       expect(index.closed[0].id).toBe("closed123456");
+    });
+  });
+
+  describe("addChild", () => {
+    test("creates new key when parent has no children", () => {
+      const result = addChild(EMPTY_INDEX, "parent00001", "child00001");
+
+      expect(result.childrenOf["parent00001"]).toEqual(["child00001"]);
+    });
+
+    test("appends to existing key", () => {
+      let index = addChild(EMPTY_INDEX, "parent00001", "child00001");
+      index = addChild(index, "parent00001", "child00002");
+
+      expect(index.childrenOf["parent00001"]).toEqual(["child00001", "child00002"]);
+    });
+
+    test("ignores duplicate child", () => {
+      const index = addChild(EMPTY_INDEX, "parent00001", "child00001");
+      const result = addChild(index, "parent00001", "child00001");
+
+      expect(result.childrenOf["parent00001"]).toEqual(["child00001"]);
+      expect(result).toBe(index); // Same reference — no change
+    });
+  });
+
+  describe("removeChild", () => {
+    test("removes child from parent's array", () => {
+      let index = addChild(EMPTY_INDEX, "parent00001", "child00001");
+      index = addChild(index, "parent00001", "child00002");
+
+      const result = removeChild(index, "parent00001", "child00001");
+
+      expect(result.childrenOf["parent00001"]).toEqual(["child00002"]);
+    });
+
+    test("deletes key when array becomes empty", () => {
+      const index = addChild(EMPTY_INDEX, "parent00001", "child00001");
+
+      const result = removeChild(index, "parent00001", "child00001");
+
+      expect(result.childrenOf["parent00001"]).toBeUndefined();
+    });
+
+    test("no-op if parent key doesn't exist", () => {
+      const result = removeChild(EMPTY_INDEX, "parent00001", "child00001");
+
+      expect(result).toBe(EMPTY_INDEX); // Same reference
+    });
+
+    test("no-op if child not found in parent's array", () => {
+      const index = addChild(EMPTY_INDEX, "parent00001", "child00001");
+      const result = removeChild(index, "parent00001", "child99999");
+
+      expect(result).toBe(index); // Same reference
+      expect(result.childrenOf["parent00001"]).toEqual(["child00001"]);
+    });
+  });
+
+  describe("getChildren", () => {
+    test("returns children for existing key", () => {
+      let index = addChild(EMPTY_INDEX, "parent00001", "child00001");
+      index = addChild(index, "parent00001", "child00002");
+
+      expect(getChildren(index, "parent00001")).toEqual(["child00001", "child00002"]);
+    });
+
+    test("returns empty array for missing key", () => {
+      expect(getChildren(EMPTY_INDEX, "parent00001")).toEqual([]);
+    });
+
+    test("returns empty array for key with no children", () => {
+      const index: IndexFile = { open: [], closed: [], childrenOf: {} };
+      expect(getChildren(index, "nonexistent")).toEqual([]);
     });
   });
 });

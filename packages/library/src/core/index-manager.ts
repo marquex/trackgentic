@@ -139,6 +139,47 @@ export function findEntry(index: IndexFile, id: IssueId): IndexEntry | null {
 }
 
 /**
+ * Add childId to parentId's children array in childrenOf map.
+ * If the key doesn't exist, creates it. Ignores duplicates.
+ * Returns a new IndexFile (immutable — original is not mutated).
+ */
+export function addChild(index: IndexFile, parentId: IssueId, childId: IssueId): IndexFile {
+  const existing = index.childrenOf[parentId];
+  if (existing && existing.includes(childId)) {
+    return index; // Already present — no change
+  }
+  const childrenOf = { ...index.childrenOf };
+  childrenOf[parentId] = existing ? [...existing, childId] : [childId];
+  return { ...index, childrenOf };
+}
+
+/**
+ * Remove childId from parentId's children array in childrenOf map.
+ * Deletes the key from the map if the resulting array is empty.
+ * Returns a new IndexFile (immutable — original is not mutated).
+ */
+export function removeChild(index: IndexFile, parentId: IssueId, childId: IssueId): IndexFile {
+  const existing = index.childrenOf[parentId];
+  if (!existing) return index;
+  const filtered = existing.filter((id) => id !== childId);
+  if (filtered.length === existing.length) return index; // Not found — no change
+  const childrenOf = { ...index.childrenOf };
+  if (filtered.length === 0) {
+    delete childrenOf[parentId];
+  } else {
+    childrenOf[parentId] = filtered;
+  }
+  return { ...index, childrenOf };
+}
+
+/**
+ * Get all child IDs for a given parent. Returns empty array if no children.
+ */
+export function getChildren(index: IndexFile, parentId: IssueId): IssueId[] {
+  return index.childrenOf[parentId] ?? [];
+}
+
+/**
  * Remove entry from whichever array it's in.
  * Returns unchanged index if not found.
  * Returns a new IndexFile (immutable — original is not mutated).
