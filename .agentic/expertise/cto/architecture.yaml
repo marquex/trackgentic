@@ -1,6 +1,42 @@
 # Architecture Knowledge
 # The complete technical architecture of trackgentic as designed in the docs.
 
+repo_structure:
+  type: "Bun workspaces monorepo"
+  layout:
+    root: "package.json (workspace config)"
+    packages_library: "packages/library/ — the core library (current focus)"
+    packages_ui: "packages/ui/ — web UI (future, not in scope)"
+  specs: ".agentic/specs/ — 5 spec files covering architecture, types, API, CLI, phases"
+
+library_package:
+  entry_points:
+    programmatic: "src/index.ts — exports Tracker class and all types"
+    cli: "src/bin.ts — shebang entry, calls cli/runner.ts"
+  modules:
+    cli:
+      runner: "commander-based arg parsing and command dispatch"
+      output: "JSON formatting to stdout/stderr"
+      commands: "one file per CLI command (init, create, update, list, view, history, comments, blockages, users)"
+    core:
+      tracker: "main Tracker class — all public methods, delegates to core modules"
+      resolution: ".trackgentic/ directory walk-up resolution"
+      events: "event append + replay engine"
+      index_manager: "sorted index management (insert, update, binary search, childrenOf)"
+      dependency_manager: "bidirectional dependency map management"
+      auth: "token resolution, mode enforcement"
+      id: "ID generation (timestamp + random base36)"
+      errors: "typed TrackgenticError class with error codes and exit codes"
+    types:
+      issue: "IssueProperties, ComputedIssue, IssueId, IssueStatus"
+      event: "all 8 event type interfaces"
+      index_file: "IndexFile, IndexEntry"
+      dependency: "DependenciesFile, BlockageEntry, BlockageInfo"
+      user: "UsersFile, UserEntry, UserInfo"
+      config: "ConfigFile"
+      api: "all request/response types for every Tracker method"
+  design_principle: "CLI is a thin wrapper over Tracker. Every CLI command calls one Tracker method. Both return identical JSON."
+
 storage_model:
   type: file-backed JSON (no database)
   location: .trackgentic/ directory, discovered by walking up from cwd

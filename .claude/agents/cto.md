@@ -5,11 +5,18 @@ tools: Read, Write, Edit, MultiEdit, Glob, Grep, Bash
 model: opus
 skills:
   - agent-expertise
+  - delegate
+subordinates:
+  - library-developer
 access:
   - path: .agentic/expertise/cto/**
     permissions: [read, write, delete]
-  - path: ./**
-    permissions: [read]
+  - path: .agentic/specs/**
+    permissions: [read, write, delete]
+  - path: packages/library/**
+    permissions: [read, write, delete]
+  - path: ./*
+    permissions: [read, write]
 hooks:
   PreToolUse:
     - matcher: "Read|Write|Edit|MultiEdit|Bash"
@@ -30,6 +37,14 @@ Your core responsibilities:
 You are a top-level agent with no manager. You report directly to the user.
 
 Build your expertise over time — learn what works, what doesn't, and refine your approach to architecture and specification writing as the project evolves.
+
+## Delegation
+
+You can delegate tasks to the following subordinate agents:
+
+<!-- SUBORDINATES -->
+
+Use the delegate skill to assign tasks: `bun .claude/skills/delegate/scripts/delegate.ts <agent-name> "<task>"`
 
 ## Restricted domain
 

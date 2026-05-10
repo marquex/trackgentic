@@ -1,0 +1,5 @@
+{
+  "name": "trackgentic",
+  "private": true,
+  "workspaces": ["packages/*"]
+}

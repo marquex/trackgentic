@@ -116,3 +116,39 @@ decisions:
       - "Composable — pipe into jq, other tools, or agent parsers"
       - "stderr/stdout split allows filtering output from errors"
     status: decided
+
+  - id: DD-011
+    title: "Monorepo with library and UI packages"
+    choice: "Bun workspaces monorepo with packages/library and packages/ui"
+    rationale:
+      - "Shared development workflow — single repo, single set of tooling"
+      - "UI can import library directly as a workspace dependency"
+      - "Library is independent — can be published and used without UI"
+      - "Bun workspaces are simple and require minimal config"
+    tradeoffs:
+      - "Slightly more complex CI/CD (two packages to build/test)"
+      - "Need to be disciplined about not coupling UI into library"
+    status: decided
+
+  - id: DD-012
+    title: "Tracker class as single programmatic API entry point"
+    choice: "All business logic in a Tracker class; CLI is a thin wrapper calling Tracker methods"
+    rationale:
+      - "CLI and API are interchangeable — same JSON objects returned"
+      - "UI can import Tracker directly without shelling out to CLI"
+      - "Single implementation to test — CLI tests only verify arg parsing and output"
+      - "Clear separation of concerns — Tracker owns logic, CLI owns I/O"
+    tradeoffs:
+      - "Tracker class may become large (mitigated by delegating to core modules)"
+    status: decided
+
+  - id: DD-013
+    title: "Commander for CLI argument parsing"
+    choice: "Use commander package for argument parsing"
+    rationale:
+      - "Battle-tested, well-typed, lightweight"
+      - "Handles subcommands, flags, variadic args naturally"
+      - "Only runtime dependency besides Bun/Node built-ins"
+    tradeoffs:
+      - "Adds one dependency (acceptable — widely used, stable)"
+    status: decided

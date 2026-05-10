@@ -2,81 +2,58 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: pre-implementation
-  source_code: none — no package.json, tsconfig.json, or src/ directory exists
+  phase: monorepo scaffold complete — ready for Phase 1 implementation
+  source_code: none — empty directory structure in place under packages/library/src/ and tests/
+  monorepo_files:
+    - package.json (root workspace config)
+    - packages/library/package.json (library package, commander + typescript + @types/bun)
+    - packages/library/tsconfig.json (ESNext, strict, bun-types)
+    - packages/library/bunfig.toml
+    - bun.lockb (generated)
+  dependencies_installed: true — bun install ran successfully (12 packages)
   documentation: complete — all 5 doc files are thorough and implementation-ready
+  specifications: complete — 5 spec files in .agentic/specs/ covering architecture, data model, API, CLI, and implementation phases
   agentic_infra: complete — .claude/ agents, skills, hooks, and expertise system working
   last_updated: "2026-05-10"
+  blockers: []
 
 implementation_roadmap:
-  phase_1_foundation:
-    description: "Core library setup and basic issue CRUD"
-    tasks:
-      - "Initialize npm project (package.json, tsconfig.json, bunfig.toml)"
-      - "Define TypeScript types and interfaces for all data structures"
-      - "Implement .trackgentic/ resolution algorithm (directory walking)"
-      - "Implement init command (create .trackgentic/ structure)"
-      - "Implement event append and replay engine"
-      - "Implement index file management (sorted insert, binary search, update)"
-      - "Implement create command"
-      - "Implement list command (filtering from index)"
-      - "Implement view command (event replay for computed state)"
-      - "Implement update command"
-      - "Implement history command"
-      - "Wire CLI entry point (bin field in package.json)"
-    estimated_complexity: high — foundational, everything depends on this
-
-  phase_2_comments_and_auth:
-    description: "Comment management and user authentication"
-    tasks:
-      - "Implement user registry (register, list, revoke, regenerate)"
-      - "Implement auth middleware (token resolution, mode enforcement)"
-      - "Implement comments add/update/delete/list"
-      - "Add author field to all mutating events"
-    estimated_complexity: medium — builds on phase 1 patterns
-
-  phase_3_hierarchy:
-    description: "Issue hierarchy with status constraints"
-    tasks:
-      - "Implement childrenOf map maintenance in index"
-      - "Implement upward constraint: auto-promotion on child status advance"
-      - "Implement downward constraint: block parent closure with open children"
-      - "Implement downward cascade: auto-close done children on parent close"
-      - "Implement reparenting logic"
-    estimated_complexity: high — bidirectional tree constraints are tricky
-
-  phase_4_blockages:
-    description: "Dependency tracking and blockage management"
-    tasks:
-      - "Implement dependencies.json bidirectional map management"
-      - "Implement blockages add/resolve/delete/list"
-      - "Implement cycle detection (transitive graph walk)"
-      - "Implement batch atomicity for blockage operations"
-      - "Implement auto-resolution when blocker reaches done/closed"
-      - "Add impact score to sort order"
-    estimated_complexity: high — graph algorithms, atomicity, cascading
-
-  phase_5_polish_and_distribution:
-    description: "Testing, documentation, and npm publishing"
-    tasks:
-      - "Comprehensive test suite"
-      - "README and API documentation"
-      - "npm package configuration (bin, files, exports)"
-      - "CI/CD setup"
-    estimated_complexity: medium
+  source: .agentic/specs/05-implementation-phases.md
+  phases:
+    phase_1_foundation:
+      description: "Project setup, types, ID generation, directory resolution, file I/O, init command, CLI runner"
+      exit_criteria: "trackgentic init creates .trackgentic/ with correct files, idempotent on re-run"
+    phase_2_event_engine_and_crud:
+      description: "Event append/replay engine, index manager with binary search, create/update/list/view/history"
+      exit_criteria: "Full CRUD cycle works: create → list → view → update → view → history"
+    phase_3_auth_and_users:
+      description: "Auth module (token resolution, mode enforcement), user CRUD (register/list/revoke/regenerate)"
+      exit_criteria: "Token-based auth enforced per mode, author in all events"
+    phase_4_comments:
+      description: "Comment lifecycle: add/update/delete/list with event replay"
+      exit_criteria: "Full comment CRUD with computed state from event replay"
+    phase_5_hierarchy:
+      description: "childrenOf map, upward auto-promotion, downward cascade, reparenting"
+      exit_criteria: "Tree constraints enforced, system-authored events in history"
+    phase_6_blockages:
+      description: "Dependency maps, cycle detection, batch atomicity, auto-resolution, impact score"
+      exit_criteria: "Full blockage lifecycle with cycle detection and auto-resolution"
+    phase_7_polish:
+      description: "Edge case testing, package config, error messages, JSDoc"
+      exit_criteria: "Package installs and CLI works from any directory, all tests pass"
 
 open_questions:
   - id: OQ-001
     question: "Where should technical specs be written?"
-    options: [".agentic/specs/", "docs/specs/", "specs/"]
-    status: unresolved
-    notes: "Need a location for implementation specs that subordinate agents can read"
+    answer: ".agentic/specs/ — chosen for proximity to agent config"
+    status: resolved
+    resolved_date: "2026-05-10"
 
   - id: OQ-002
     question: "Should we have a programmatic API in addition to CLI?"
-    context: "Docs only describe CLI, but as an npm library, consumers may want to import directly"
-    status: unresolved
-    notes: "Likely yes — CLI can be a thin wrapper over a core library API"
+    answer: "Yes — Tracker class is the core API. CLI is a thin wrapper. Both return identical JSON structures."
+    status: resolved
+    resolved_date: "2026-05-10"
 
   - id: OQ-003
     question: "Should the library handle concurrent file access?"

@@ -22,10 +22,18 @@ architecture:
         model: opus
         description: Chief Technology Officer — designs architecture, generates specs, tracks development alignment
         access: [.agentic/expertise/cto/**, ./**]
+        subordinates: [library-developer]
+        skills: [agent-expertise, delegate]
+        hooks: [enforce-agent-access.ts]
+      - name: library-developer
+        model: opus
+        description: TypeScript library developer — owns all technical details of the npm-published library
+        access: [.agentic/expertise/library-developer/**, packages/library/**, .agentic/specs/**]
         subordinates: none
         skills: [agent-expertise]
         hooks: [enforce-agent-access.ts]
-    notes: hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well.
+        manager: cto
+    notes: hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well. Second hire (library-developer) went smoothly — user provided complete info upfront, only changed model from sonnet to opus.
 
   skills:
     path: .claude/skills/
@@ -106,14 +114,16 @@ patterns:
   - For CTO-type roles: start with read-only repo access, add write folders when specs location is decided
   - Agent creation is multi-step — always confirm before writing files, user may adjust access or hierarchy
   - Users often override the default model (sonnet) — always present model in confirmation summary so it's visible and adjustable
-  - First agent hired (cto) — the hire-expert skill workflow completed cleanly end-to-end with no issues
+  - Second hire (library-developer) — user provided all info upfront in a single description; only change was model (sonnet → opus). When user gives complete info, skip directly to confirmation step.
+  - When adding first subordinate to a manager: add delegate skill, add subordinates list, add Delegation section with SUBORDINATES marker before Restricted domain section
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
 
-resolved:
-  - "FIXED: 2>&1 fd redirects were matching WRITE_BASH_PATTERNS — added negative lookahead (?!&\\d) to the redirection regex: />>?(?!&\\d)\\s*\\S/. Real file redirects (> file, >> file, 2>file, &>file) still caught; fd-to-fd redirects (2>&1, 1>&2) now pass through as read-only."
-
 open_questions:
   - Does the project have a CLAUDE.md at root level already? (User says no, will generate later)
-  - Where should the CTO write technical specs? (e.g., .agentic/specs/ or elsewhere)
+
+resolved:
+  - "FIXED: 2>&1 fd redirects were matching WRITE_BASH_PATTERNS — added negative lookahead (?!&\\d) to the redirection regex: />>?(?!&\\d)\\s*\\S/. Real file redirects (> file, >> file, 2>file, &>file) still caught; fd-to-fd redirects (2>&1, 1>&2) now pass through as read-only."
+  - "RESOLVED: Specs location confirmed as .agentic/specs/ — used by library-developer for read access to project specifications"
+  - "RESOLVED: Library code lives in packages/library/ — the library-developer agent has full read/write/delete access there"

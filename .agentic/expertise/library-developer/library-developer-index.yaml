@@ -1,0 +1,9 @@
+# Library Developer Expertise Index
+# Agent: library-developer
+# Domain: TypeScript library development — npm package implementation, build, testing, and publishing
+
+hierarchy:
+  manager: cto
+  subordinates: [none — leaf agent]
+
+expertise_status: "New agent — no expertise accumulated yet. Start building expertise from the first session."

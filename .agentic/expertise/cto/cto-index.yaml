@@ -4,16 +4,19 @@
 
 hierarchy:
   manager: none — top-level agent
-  subordinates: none — leaf agent
+  subordinates:
+    planned:
+      - library-developer (to be hired for implementation)
 
-expertise_status: "Initialized — project docs fully absorbed, architecture understood, ready to spec and guide."
+expertise_status: "Monorepo scaffold complete. packages/** access rule added. Root and library config files created, dependencies installed, directory structure in place. Ready for Phase 1 implementation."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: pre-implementation (docs and agentic infra only, no source code yet)
+  stage: monorepo scaffold complete
+  bun_version: "1.3.11"
 
 detail_files:
   - path: architecture.yaml
@@ -22,6 +25,20 @@ detail_files:
     description: Architectural decisions and rationale (why file-backed, why event-sourced, etc.)
   - path: status.yaml
     description: Current project status, implementation roadmap, open questions, risks
+
+specifications:
+  location: .agentic/specs/
+  files:
+    - path: 01-overview.md
+      description: Monorepo structure, library package layout, design principles, dependencies, CLI/API relationship
+    - path: 02-data-model.md
+      description: All TypeScript types, interfaces, file formats, initial file contents
+    - path: 03-api-specification.md
+      description: Every Tracker method with params, return types, behavior, error handling
+    - path: 04-cli-specification.md
+      description: Every CLI command with args, flags, auth, output format, error handling
+    - path: 05-implementation-phases.md
+      description: 7 phases from foundation to polish, with tasks, tests, and exit criteria per phase
 
 docs_absorbed:
   - docs/introduction.md — project vision, file structure, issue properties, CLI overview, config
@@ -40,3 +57,18 @@ session_log:
   - session: 3
     date: "2026-05-10"
     summary: "Confirmed expertise is current. No new knowledge gained this session — existing files cover all project docs and architecture."
+  - session: 4
+    date: "2026-05-10"
+    summary: "Generated full library specifications (5 files in .agentic/specs/). Resolved OQ-001 (specs location) and OQ-002 (programmatic API). Updated expertise and status. Ready to delegate to library-developer."
+  - session: 5
+    date: "2026-05-10"
+    summary: "User requested monorepo creation. Attempted to create root package.json and packages/library/ files but hit read-only access restriction. CTO agent can write .agentic/ files but not repo source files. Awaiting permission update or alternative approach."
+  - session: 6
+    date: "2026-05-10"
+    summary: "User updated permissions. Root-level ./* write works. Discovered packages/** subdirectory is not covered — Bash mkdir and file writes to packages/library/ are blocked. Identified needed access rule: 'packages/** with read+write'. Awaiting user to add it."
+  - session: 7
+    date: "2026-05-10"
+    summary: "User created packages/library/ folder. Attempted monorepo initialization but still blocked — ./* access rule only covers root-level files, not packages/** subdirectories. Requested user add 'packages/** with [read, write]' access rule."
+  - session: 8
+    date: "2026-05-10"
+    summary: "User granted packages/** access. Initialized monorepo: root package.json, packages/library/ with package.json/tsconfig.json/bunfig.toml, full src/ and tests/ directory tree. Initially overstepped by writing type source files — user corrected to scaffold only. Deleted all source files, kept config only. Ran bun install successfully."
