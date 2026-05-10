@@ -16,12 +16,18 @@ import type {
   ListResult,
   UpdateParams,
   UpdateResult,
+  UserEntry,
   UsersFile,
+  UsersListResult,
+  UsersRegenerateResult,
+  UsersRegisterResult,
+  UsersRevokeResult,
   ViewResult,
 } from "../types";
+import { resolveAuthor } from "./auth";
 import { ErrorCodes, TrackgenticError } from "./errors";
 import { appendEvent, computeState, replayEvents } from "./events";
-import { atomicWriteJSON } from "./file-io";
+import { atomicWriteJSON, readJSON } from "./file-io";
 import { generateId } from "./id";
 import { findEntry, insertEntry, readIndex, updateEntry, writeIndex } from "./index-manager";
 import { resolveTrackerDir } from "./resolution";
@@ -33,7 +39,7 @@ const TRACKGENTIC_DIR = ".trackgentic";
  */
 const DEFAULT_CONFIG: ConfigFile = {
   auth: {
-    mode: "read-only",
+    mode: "open",
     defaultUser: "anonymous",
   },
 };
@@ -61,6 +67,13 @@ const DEFAULT_DEPENDENCIES: DependenciesFile = {
 const DEFAULT_USERS: UsersFile = {
   users: [],
 };
+
+/**
+ * Generate a token: tk_ + 8 random alphanumeric characters.
+ */
+function generateToken(): string {
+  return `tk_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 /**
  * Tracker — the main programmatic API for trackgentic.
@@ -109,9 +122,14 @@ export class Tracker {
       );
     }
 
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
     const id = generateId();
     const issuePath = params.path ?? `issues/${id}.json`;
-    const author = params.author ?? "anonymous";
     const now = new Date().toISOString();
 
     const title = params.title;
@@ -180,6 +198,13 @@ export class Tracker {
       );
     }
 
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
     const index = await readIndex(trackerDir);
 
     // Determine source arrays based on params.status
@@ -239,6 +264,13 @@ export class Tracker {
       );
     }
 
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
     const index = await readIndex(trackerDir);
     const entry = findEntry(index, id);
     if (!entry) {
@@ -293,6 +325,12 @@ export class Tracker {
       );
     }
 
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) return authResult;
+    const author = params.author ?? authResult.author;
+
     const index = await readIndex(trackerDir);
     const entry = findEntry(index, id);
     if (!entry) {
@@ -327,7 +365,6 @@ export class Tracker {
     if (params.priority !== undefined) content.priority = params.priority;
     if (params.parentId !== undefined) content.parentId = params.parentId;
 
-    const author = params.author ?? "anonymous";
     const now = new Date().toISOString();
 
     const updateEvent = {
@@ -372,6 +409,13 @@ export class Tracker {
       );
     }
 
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
     const index = await readIndex(trackerDir);
     const entry = findEntry(index, id);
     if (!entry) {
@@ -392,5 +436,162 @@ export class Tracker {
     }
 
     return replayEvents(issueFilePath);
+  }
+
+  // ─── User Management ──────────────────────────────────────────────
+
+  /**
+   * Register a new user. Does NOT require auth (bootstrap mechanism).
+   */
+  async usersRegister(name: string): Promise<UsersRegisterResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const lowerName = name.toLowerCase();
+
+    // Reject reserved name
+    if (lowerName === "anonymous") {
+      return {
+        result: "USER_ALREADY_EXISTS",
+        message: `"anonymous" is a reserved name and cannot be registered.`,
+      };
+    }
+
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+
+    // Check uniqueness
+    if (users.users.find((u) => u.name === lowerName)) {
+      return {
+        result: "USER_ALREADY_EXISTS",
+        message: `User "${lowerName}" already exists.`,
+      };
+    }
+
+    const token = generateToken();
+    const newUser: UserEntry = {
+      name: lowerName,
+      token,
+      registeredAt: new Date().toISOString(),
+    };
+
+    users.users.push(newUser);
+    await atomicWriteJSON(join(trackerDir, "users.json"), users);
+
+    return { result: "OK", name: lowerName, token };
+  }
+
+  /**
+   * List all registered users (tokens stripped).
+   * Auth: depends on mode (read operation).
+   */
+  async usersList(): Promise<UsersListResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
+    return users.users.map((u) => ({
+      name: u.name,
+      registeredAt: u.registeredAt,
+    }));
+  }
+
+  /**
+   * Revoke (remove) a user. Requires auth (write operation).
+   */
+  async usersRevoke(name: string): Promise<UsersRevokeResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
+    const lowerName = name.toLowerCase();
+    const userIndex = users.users.findIndex((u) => u.name === lowerName);
+    if (userIndex === -1) {
+      return {
+        result: "USER_NOT_FOUND",
+        message: `User "${lowerName}" not found.`,
+      };
+    }
+
+    users.users.splice(userIndex, 1);
+    await atomicWriteJSON(join(trackerDir, "users.json"), users);
+
+    return { result: "OK" };
+  }
+
+  /**
+   * Regenerate a user's token. Self-service only — caller must be the target user.
+   * Requires auth (write operation).
+   */
+  async usersRegenerate(name: string): Promise<UsersRegenerateResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: true });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
+    const callerName = authResult.author;
+    const lowerName = name.toLowerCase();
+
+    // Self-service check: caller must be the target user
+    if (callerName !== lowerName) {
+      return {
+        result: "INVALID_TOKEN",
+        message: `You can only regenerate your own token.`,
+      };
+    }
+
+    const user = users.users.find((u) => u.name === lowerName);
+    if (!user) {
+      return {
+        result: "USER_NOT_FOUND",
+        message: `User "${lowerName}" not found.`,
+      };
+    }
+
+    const newToken = generateToken();
+    user.token = newToken;
+    await atomicWriteJSON(join(trackerDir, "users.json"), users);
+
+    return { result: "OK", name: lowerName, token: newToken };
   }
 }

@@ -33,11 +33,7 @@ export type {
 // Config types
 export type { ConfigFile } from "./config";
 // Dependency types
-export type {
-  BlockageEntry,
-  BlockageInfo,
-  DependenciesFile,
-} from "./dependency";
+export type { BlockageEntry, BlockageInfo, DependenciesFile } from "./dependency";
 // Event types
 export type {
   BaseEvent,
@@ -52,10 +48,7 @@ export type {
   UpdateEvent,
 } from "./event";
 // Index file types
-export type {
-  IndexEntry,
-  IndexFile,
-} from "./index-file";
+export type { IndexEntry, IndexFile } from "./index-file";
 export type {
   CommentId,
   ComputedComment,
@@ -65,8 +58,4 @@ export type {
   IssueStatus,
 } from "./issue";
 // User types
-export type {
-  UserEntry,
-  UserInfo,
-  UsersFile,
-} from "./user";
+export type { UserEntry, UserInfo, UsersFile } from "./user";

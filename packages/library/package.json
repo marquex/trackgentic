@@ -16,9 +16,10 @@
     "test:coverage": "bun test --coverage",
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src/ tests/",
-    "lint:fix": "biome check --fix src/ tests/",
-    "format": "biome format --write src/ tests/",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint --fix src/ tests/",
+    "format": "prettier --write src/ tests/",
+    "format:check": "prettier --check src/ tests/",
     "docs:generate": "typedoc",
     "docs:check": "typedoc --emit none",
     "quality": "bun run typecheck && bun run lint && bun run test:coverage"
@@ -33,10 +34,13 @@
     "commander": "^13.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@eslint/js": "^9.28.0",
     "@types/bun": "^1.2.0",
+    "eslint": "^9.28.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.33.0",
     "typedoc": "^0.28.19",
-    "typedoc-plugin-markdown": "^4.11.0",
-    "typescript": "^5.7.0"
+    "typedoc-plugin-markdown": "^4.11.0"
   }
 }

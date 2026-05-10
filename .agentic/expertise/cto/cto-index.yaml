@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 2 complete. Event engine, index manager, full CRUD (create/list/view/update/history), and CLI commands implemented. 122 tests, 742 assertions, 99.11% coverage (100% functions). All quality gates passing. Ready to delegate Phase 3."
+expertise_status: "Phase 3 complete. Auth system, user CRUD, auth integration into all methods, CLI user commands. 167 tests, 846 assertions, 99.22% coverage. Tooling swapped from Biome to Prettier + ESLint. All quality gates passing. Ready for Phase 4."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Phase 2 complete (event engine + CRUD), ready for Phase 3 (auth + users)
+  stage: Phase 3 complete (auth + users), ready for Phase 4 (comments)
   bun_version: "1.3.11"
 
 detail_files:
@@ -41,13 +41,25 @@ specifications:
     - path: 05-implementation-phases.md
       description: 7 phases from foundation to polish, with tasks, tests, and exit criteria per phase
     - path: 06-quality-plan.md
-      description: Linting (Biome), typechecking (strict+), testing (Bun), test organization, code review checklist, documentation (TypeDoc), quality gates
+      description: Quality plan — now uses Prettier + ESLint (was Biome). Linting, typechecking (strict+), testing (Bun), test organization, documentation (TypeDoc), quality gates
+    - path: 07-phase3-auth-users.md
+      description: Phase 3 specification — auth module (resolveAuthor), user CRUD (register/list/revoke/regenerate), auth integration into existing methods, CLI user commands
+
+access_boundaries:
+  rule: "CTO must NOT read or modify files under packages/library/. All code changes go through subordinates."
+  cto_scope: ".agentic/ files, root-level config, specifications, expertise files"
+  code_access: "If code-level insight is needed, ask library-developer or library-quality to report — never read source directly."
+  enforced: "2026-05-10 — user explicitly removed CTO read permissions on packages/library/"
 
 delegation_workflow:
   mandatory_sequence: |
     After every library-developer delegation that makes code changes, you MUST delegate to library-quality for validation.
     Sequence: library-developer (implement) → library-quality (validate).
     Never skip the quality validation step. This ensures code is clean, tested, and documented.
+  timeout_constraint: |
+    Bash tool has a 10-minute (600000ms) timeout. Large phases must be split into sub-delegations of ~5-8 minutes each.
+    Split strategy for Phase 3: (A) auth.ts + errors.ts, (B) user methods in tracker.ts, (C) auth integration into existing methods + CLI commands, (D) library-quality validation.
+    Each sub-task should be scoped to a few files to stay within timeout.
   note: "Self-check and validation steps are enforced via agent system prompts. No need to duplicate in delegation messages."
   library-developer:
     focus: "Focus delegation messages on the implementation task itself. The agent self-checks typecheck+lint+test before completion."
@@ -116,3 +128,12 @@ session_log:
   - session: 18
     date: "2026-05-10"
     summary: "User asked about Biome vs tsc value. Explained complementary roles: tsc catches type errors, Biome catches code quality issues (unused vars, cognitive complexity, formatting). Documented the TS/Biome tension pattern (noPropertyAccessFromIndexSignature vs UseLiteralKeys) and resolution (typed interfaces over Record). Added DD-014 (Biome for linting alongside strict TypeScript) to design-decisions.yaml."
+  - session: 19
+    date: "2026-05-10"
+    summary: "User enforced strict access boundaries: CTO can no longer read packages/library/. All code interaction must flow through subordinates (library-developer for implementation, library-quality for validation). Updated expertise with access_boundaries section. Ready to delegate Phase 3 (Auth & Users)."
+  - session: 20
+    date: "2026-05-10"
+    summary: "Created Phase 3 spec (07-phase3-auth-users.md) covering auth module, user CRUD, auth integration into existing methods, CLI user commands. Attempted to delegate full Phase 3 to library-developer but hit 10-minute Bash tool timeout — task too large for single delegation. Identified need to split Phase 3 into smaller sub-delegations (~5-8 min each). Updated expertise with timeout_constraint in delegation_workflow. Next: split Phase 3 into sub-tasks (A: auth.ts + errors, B: user methods, C: auth integration + CLI)."
+  - session: 21
+    date: "2026-05-10"
+    summary: "User reported library-developer finished Phase 3 coding but Biome was blocking. Decision: replace Biome with Prettier + ESLint for faster development. Updated DD-014 in design-decisions.yaml. Delegated tooling swap to library-developer (remove biome.json, add .prettierrc + eslint.config.js, update scripts). Completed successfully. Delegated to library-quality for validation: all gates pass, 45 new tests added (13 auth unit tests, 23 user+auth integration tests, 9 CLI user command tests). Phase 3 complete: 167 tests, 846 assertions, 99.22% coverage. Tooling: Prettier ^3.5.3, ESLint ^9.28, typescript-eslint ^8.33. Note: default auth mode changed from 'read-only' to 'open' for development ergonomics."

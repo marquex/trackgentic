@@ -41,23 +41,38 @@ async function readStdin(): Promise<HookInput | null> {
     }
 }
 
-function handleUserPromptSubmit(input: HookInput): void {
-    const {agent_type, session_id} = input;
-    if (!agent_type || !session_id) process.exit(0);
-
-    const indexPath = expertiseIndexPath(agent_type);
+function injectExpertise(eventName: string, agentType: string, sessionId: string): void {
+    const indexPath = expertiseIndexPath(agentType);
     if (!existsSync(indexPath)) process.exit(0);
 
     const indexContent = readFileSync(indexPath, 'utf8');
 
-    writeFileSync(flagPath(session_id, agent_type), '1');
+    writeFileSync(flagPath(sessionId, agentType), '1');
 
     emit({
         hookSpecificOutput: {
-            hookEventName: 'UserPromptSubmit',
+            hookEventName: eventName,
             additionalContext: `You are an expert agent that learns with every task you complete. This is what you know at the moment (${indexPath}):\n${indexContent}`,
         },
     });
+}
+
+function handleSessionStart(input: HookInput): void {
+    const {agent_type, session_id} = input;
+    if (!agent_type || !session_id) process.exit(0);
+
+    injectExpertise('SessionStart', agent_type, session_id);
+}
+
+function handleUserPromptSubmit(input: HookInput): void {
+    const {agent_type, session_id} = input;
+    if (!agent_type || !session_id) process.exit(0);
+
+    // Skip if already injected at SessionStart (avoids duplication in -p mode
+    // and interactive sessions where both events fire)
+    if (existsSync(flagPath(session_id, agent_type))) process.exit(0);
+
+    injectExpertise('UserPromptSubmit', agent_type, session_id);
 }
 
 function handleStop(input: HookInput, _eventName: string): void {
@@ -85,6 +100,8 @@ async function main(): Promise<void> {
     if (!input) process.exit(0);
 
     switch (input.hook_event_name) {
+        case 'SessionStart':
+            return handleSessionStart(input);
         case 'UserPromptSubmit':
             return handleUserPromptSubmit(input);
         case 'Stop':

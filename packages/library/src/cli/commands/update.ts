@@ -46,6 +46,10 @@ export async function updateAction(issueId: string, options: UpdateOptions): Pro
 
     const tracker = new Tracker();
     const result = await tracker.update(issueId, params);
+    if (result instanceof TrackgenticError) {
+      writeStderr({ result: result.result, message: result.message });
+      process.exit(result.exitCode);
+    }
     writeStdout(result);
     process.exit(0);
   } catch (err) {

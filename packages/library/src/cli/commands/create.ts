@@ -34,6 +34,10 @@ export async function createAction(title: string, options: CreateOptions): Promi
     if (options.path !== undefined) params.path = options.path;
 
     const result = await tracker.create(params);
+    if (result instanceof TrackgenticError) {
+      writeStderr({ result: result.result, message: result.message });
+      process.exit(result.exitCode);
+    }
     writeStdout(result);
     process.exit(0);
   } catch (err) {

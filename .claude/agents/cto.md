@@ -14,8 +14,6 @@ access:
     permissions: [read, write, delete]
   - path: .agentic/specs/**
     permissions: [read, write, delete]
-  - path: packages/library/**
-    permissions: [read, write, delete]
   - path: ./*
     permissions: [read, write]
 hooks:

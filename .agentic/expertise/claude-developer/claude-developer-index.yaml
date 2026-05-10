@@ -61,6 +61,7 @@ architecture:
         has_scripts: true
         scripts: [expertise.hook.ts, yaml-validator.ts]
         hooks_registered_in: settings.json (SessionStart, UserPromptSubmit, Stop)
+        injection_flow: SessionStart is primary injection point; UserPromptSubmit is fallback (skips if SessionStart already injected via flag check)
       - name: hire-expert
         purpose: Create new expert agents with proper hierarchy, access rules, and expertise setup
         has_scripts: false
@@ -100,6 +101,9 @@ architecture:
       UserPromptSubmit: [expertise.hook.ts]
     permissions:
       allow: [Bash(bun .claude/hooks/*), Bash(bun .claude/skills/**), Write/Edit/MultiEdit on .claude/**]
+    env:
+      BASH_DEFAULT_TIMEOUT_MS: "600000"
+      BASH_MAX_TIMEOUT_MS: "1800000"
 
   expertise_system:
     path: .agentic/expertise/{agent-name}/
@@ -133,11 +137,14 @@ patterns:
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
+  - yaml-validator.ts takes a directory path (not a file path) — it recursively finds all YAML files in the given directory
+  - Expertise injection was only handled on UserPromptSubmit, not SessionStart — delegated subagents via delegate skill (claude -p) need SessionStart injection since that's the primary context injection point before the first prompt
 
-open_questions:
-  - Does the project have a CLAUDE.md at root level already? (User says no, will generate later)
+open_questions: []
 
 resolved:
   - "FIXED: 2>&1 fd redirects were matching WRITE_BASH_PATTERNS — added negative lookahead (?!&\\d) to the redirection regex: />>?(?!&\\d)\\s*\\S/. Real file redirects (> file, >> file, 2>file, &>file) still caught; fd-to-fd redirects (2>&1, 1>&2) now pass through as read-only."
   - "RESOLVED: Specs location confirmed as .agentic/specs/ — used by library-developer for read access to project specifications"
   - "RESOLVED: Library code lives in packages/library/ — the library-developer agent has full read/write/delete access there"
+  - "RESOLVED: Bash timeout configurable via env vars — BASH_DEFAULT_TIMEOUT_MS (default 2 min) and BASH_MAX_TIMEOUT_MS (default 10 min, the ceiling). Can be set via the `env` key in settings.json to apply to all sessions, or in shell profile before Claude Code starts. Project currently uses BASH_DEFAULT_TIMEOUT_MS=600000 (10 min) and BASH_MAX_TIMEOUT_MS=1800000 (30 min)."
+  - "FIXED: Expertise injection for delegated subagents — expertise.hook.ts now handles SessionStart event (primary injection point). Uses flag-based de-duplication: SessionStart writes flag + injects; UserPromptSubmit checks flag and skips if already injected. This ensures expertise is available from session start in both interactive and -p (delegated) modes."

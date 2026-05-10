@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { TrackgenticError } from "../../src/core/errors";
@@ -39,7 +39,7 @@ describe("Tracker", () => {
       );
       expect(config).toEqual({
         auth: {
-          mode: "read-only",
+          mode: "open",
           defaultUser: "anonymous",
         },
       });
@@ -103,7 +103,7 @@ describe("Tracker", () => {
       const config = JSON.parse(
         readFileSync(join(testDir, ".trackgentic", "config.json"), "utf-8"),
       );
-      expect(config.auth.mode).toBe("read-only");
+      expect(config.auth.mode).toBe("open");
       expect(config.auth.defaultUser).toBe("anonymous");
     });
 
@@ -736,7 +736,7 @@ describe("Tracker", () => {
   });
 
   describe("full CRUD cycle", () => {
-    test("create → list → view → update → view → history", async () => {
+    test("create -> list -> view -> update -> view -> history", async () => {
       const tracker = new Tracker(testDir);
       await tracker.init();
 
@@ -794,6 +794,342 @@ describe("Tracker", () => {
         expect(history[0].type).toBe("creation");
         expect(history[1].type).toBe("update");
         expect(history[2].type).toBe("update");
+      }
+    });
+  });
+
+  // ─── User Management Tests ───────────────────────────────────────
+
+  describe("user management", () => {
+    let tracker: Tracker;
+    let savedToken: string | undefined;
+
+    beforeEach(async () => {
+      savedToken = process.env.TRACKGENTIC_USER_TOKEN;
+      delete process.env.TRACKGENTIC_USER_TOKEN;
+      tracker = new Tracker(testDir);
+      await tracker.init();
+    });
+
+    afterEach(() => {
+      if (savedToken !== undefined) {
+        process.env.TRACKGENTIC_USER_TOKEN = savedToken;
+      } else {
+        delete process.env.TRACKGENTIC_USER_TOKEN;
+      }
+    });
+
+    describe("usersRegister", () => {
+      test("creates user and returns token with lowercased name", async () => {
+        const result = await tracker.usersRegister("Alice");
+
+        expect(result.result).toBe("OK");
+        if (result.result === "OK") {
+          expect(result.name).toBe("alice");
+          expect(result.token).toMatch(/^tk_[a-z0-9]{8}$/);
+        }
+      });
+
+      test("rejects duplicate name with USER_ALREADY_EXISTS", async () => {
+        await tracker.usersRegister("alice");
+        const result = await tracker.usersRegister("alice");
+
+        expect(result.result).toBe("USER_ALREADY_EXISTS");
+        if (result.result === "USER_ALREADY_EXISTS") {
+          expect(result.message).toContain("alice");
+        }
+      });
+
+      test('rejects "anonymous" as reserved name', async () => {
+        const result = await tracker.usersRegister("anonymous");
+
+        expect(result.result).toBe("USER_ALREADY_EXISTS");
+        if (result.result === "USER_ALREADY_EXISTS") {
+          expect(result.message).toContain("anonymous");
+        }
+      });
+
+      test("persists user to users.json", async () => {
+        await tracker.usersRegister("alice");
+
+        const usersData = JSON.parse(
+          readFileSync(join(testDir, ".trackgentic", "users.json"), "utf-8"),
+        );
+        expect(usersData.users).toHaveLength(1);
+        expect(usersData.users[0].name).toBe("alice");
+        expect(usersData.users[0].token).toMatch(/^tk_[a-z0-9]{8}$/);
+        expect(usersData.users[0].registeredAt).toBeTruthy();
+      });
+
+      test("rejects duplicate regardless of casing", async () => {
+        await tracker.usersRegister("Alice");
+        const result = await tracker.usersRegister("ALICE");
+
+        expect(result.result).toBe("USER_ALREADY_EXISTS");
+      });
+    });
+
+    describe("usersList", () => {
+      test("returns users without tokens", async () => {
+        await tracker.usersRegister("alice");
+        await tracker.usersRegister("bob");
+
+        const result = await tracker.usersList();
+        expect(result).toHaveLength(2);
+        expect(result[0]).toEqual({
+          name: "alice",
+          registeredAt: expect.any(String),
+        });
+        expect(result[1]).toEqual({
+          name: "bob",
+          registeredAt: expect.any(String),
+        });
+        // Tokens must NOT be included
+        for (const user of result) {
+          expect("token" in user).toBe(false);
+        }
+      });
+
+      test("returns empty array when no users registered", async () => {
+        const result = await tracker.usersList();
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe("usersRevoke", () => {
+      test("removes a user", async () => {
+        await tracker.usersRegister("alice");
+        const result = await tracker.usersRevoke("alice");
+
+        expect(result).toEqual({ result: "OK" });
+
+        // Verify user is actually removed
+        const listResult = await tracker.usersList();
+        expect(listResult).toHaveLength(0);
+      });
+
+      test("rejects with USER_NOT_FOUND for non-existent user", async () => {
+        const result = await tracker.usersRevoke("nonexistent");
+
+        expect(result.result).toBe("USER_NOT_FOUND");
+        if (result.result === "USER_NOT_FOUND") {
+          expect(result.message).toContain("nonexistent");
+        }
+      });
+
+      test("name matching is case-insensitive", async () => {
+        await tracker.usersRegister("Alice");
+        const result = await tracker.usersRevoke("alice");
+
+        expect(result).toEqual({ result: "OK" });
+      });
+    });
+
+    describe("usersRegenerate", () => {
+      test("generates new token for self", async () => {
+        const regResult = await tracker.usersRegister("alice");
+        if (regResult.result !== "OK") throw new Error("Register failed");
+        const oldToken = regResult.token;
+
+        // Set env var so resolveAuthor identifies caller as alice
+        process.env.TRACKGENTIC_USER_TOKEN = oldToken;
+
+        const result = await tracker.usersRegenerate("alice");
+        if (result.result === "OK") {
+          expect(result.token).not.toBe(oldToken);
+          expect(result.token).toMatch(/^tk_[a-z0-9]{8}$/);
+          expect(result.name).toBe("alice");
+        } else {
+          expect.unreachable("Expected OK result");
+        }
+      });
+
+      test("rejects when caller is not the target user (self-service only)", async () => {
+        const aliceResult = await tracker.usersRegister("alice");
+        await tracker.usersRegister("bob");
+        if (aliceResult.result !== "OK") throw new Error("Register failed");
+
+        // Alice tries to regenerate bob's token
+        process.env.TRACKGENTIC_USER_TOKEN = aliceResult.token;
+        const result = await tracker.usersRegenerate("bob");
+
+        expect(result.result).toBe("INVALID_TOKEN");
+        if (result.result === "INVALID_TOKEN") {
+          expect(result.message).toBeTruthy();
+        }
+      });
+
+      test("rejects with USER_NOT_FOUND for non-existent user", async () => {
+        // In open mode without token, resolveAuthor returns "anonymous".
+        // Calling regenerate("anonymous") passes the self-service check
+        // (anonymous === anonymous) but "anonymous" is never in users list.
+        const result = await tracker.usersRegenerate("anonymous");
+        expect(result.result).toBe("USER_NOT_FOUND");
+      });
+
+      test("persists new token to users.json", async () => {
+        const regResult = await tracker.usersRegister("alice");
+        if (regResult.result !== "OK") throw new Error("Register failed");
+        process.env.TRACKGENTIC_USER_TOKEN = regResult.token;
+
+        const genResult = await tracker.usersRegenerate("alice");
+        if (genResult.result !== "OK") throw new Error("Regenerate failed");
+
+        const usersData = JSON.parse(
+          readFileSync(join(testDir, ".trackgentic", "users.json"), "utf-8"),
+        );
+        expect(usersData.users[0].token).toBe(genResult.token);
+        expect(usersData.users[0].token).not.toBe(regResult.token);
+      });
+    });
+  });
+
+  // ─── Auth Integration Tests ──────────────────────────────────────
+
+  describe("auth integration", () => {
+    let tracker: Tracker;
+    let savedToken: string | undefined;
+
+    beforeEach(async () => {
+      savedToken = process.env.TRACKGENTIC_USER_TOKEN;
+      delete process.env.TRACKGENTIC_USER_TOKEN;
+      tracker = new Tracker(testDir);
+      await tracker.init();
+    });
+
+    afterEach(() => {
+      if (savedToken !== undefined) {
+        process.env.TRACKGENTIC_USER_TOKEN = savedToken;
+      } else {
+        delete process.env.TRACKGENTIC_USER_TOKEN;
+      }
+    });
+
+    function setAuthMode(mode: "open" | "read-only" | "strict", defaultUser = "anonymous") {
+      const configPath = join(testDir, ".trackgentic", "config.json");
+      writeFileSync(configPath, JSON.stringify({ auth: { mode, defaultUser } }));
+    }
+
+    test("open mode: create without token uses defaultUser as author", async () => {
+      const result = await tracker.create({ title: "Open Mode Test" });
+      if ("id" in result) {
+        const issuePath = join(testDir, ".trackgentic", "issues", `${result.id}.json`);
+        const events = JSON.parse(readFileSync(issuePath, "utf-8"));
+        expect(events[0].author).toBe("anonymous");
+      }
+    });
+
+    test("read-only mode: create without token returns TOKEN_REQUIRED", async () => {
+      setAuthMode("read-only");
+      const result = await tracker.create({ title: "Should Fail" });
+
+      expect(result).toBeInstanceOf(TrackgenticError);
+      if (result instanceof TrackgenticError) {
+        expect(result.result).toBe("TOKEN_REQUIRED");
+        expect(result.exitCode).toBe(2);
+      }
+    });
+
+    test("read-only mode: list without token succeeds", async () => {
+      setAuthMode("read-only");
+      const result = await tracker.list();
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    test("read-only mode: update without token returns TOKEN_REQUIRED", async () => {
+      // Create in open mode first
+      const created = await tracker.create({ title: "To Update" });
+      if (!("id" in created)) throw new Error("Create failed");
+
+      // Switch to read-only and try to update
+      setAuthMode("read-only");
+      const result = await tracker.update(created.id, { title: "Should Fail" });
+
+      expect(result).toBeInstanceOf(TrackgenticError);
+      if (result instanceof TrackgenticError) {
+        expect(result.result).toBe("TOKEN_REQUIRED");
+      }
+    });
+
+    test("strict mode: list without token throws TOKEN_REQUIRED", async () => {
+      setAuthMode("strict");
+      try {
+        await tracker.list();
+        expect.unreachable("Should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(TrackgenticError);
+        const e = err as TrackgenticError;
+        expect(e.result).toBe("TOKEN_REQUIRED");
+        expect(e.exitCode).toBe(2);
+      }
+    });
+
+    test("strict mode: view without token throws TOKEN_REQUIRED", async () => {
+      setAuthMode("strict");
+      try {
+        await tracker.view("any1234567");
+        expect.unreachable("Should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(TrackgenticError);
+        const e = err as TrackgenticError;
+        expect(e.result).toBe("TOKEN_REQUIRED");
+      }
+    });
+
+    test("with valid token: create uses author from token", async () => {
+      const regResult = await tracker.usersRegister("alice");
+      if (regResult.result !== "OK") throw new Error("Register failed");
+      process.env.TRACKGENTIC_USER_TOKEN = regResult.token;
+
+      const result = await tracker.create({ title: "Auth Test" });
+      if ("id" in result) {
+        const issuePath = join(testDir, ".trackgentic", "issues", `${result.id}.json`);
+        const events = JSON.parse(readFileSync(issuePath, "utf-8"));
+        expect(events[0].author).toBe("alice");
+        expect(events[1].author).toBe("alice");
+      }
+    });
+
+    test("with invalid token: create returns INVALID_TOKEN", async () => {
+      process.env.TRACKGENTIC_USER_TOKEN = "tk_fake0000";
+      const result = await tracker.create({ title: "Bad Token" });
+
+      expect(result).toBeInstanceOf(TrackgenticError);
+      if (result instanceof TrackgenticError) {
+        expect(result.result).toBe("INVALID_TOKEN");
+        expect(result.exitCode).toBe(3);
+      }
+    });
+
+    test("events contain resolved author when token is used", async () => {
+      const regResult = await tracker.usersRegister("bob");
+      if (regResult.result !== "OK") throw new Error("Register failed");
+      process.env.TRACKGENTIC_USER_TOKEN = regResult.token;
+
+      const created = await tracker.create({ title: "Authored Issue" });
+      if ("id" in created) {
+        const events = await tracker.history(created.id);
+        if (Array.isArray(events)) {
+          for (const event of events) {
+            if ("author" in event) {
+              expect(event.author).toBe("bob");
+            }
+          }
+        }
+      }
+    });
+
+    test("author param overrides resolved author when provided", async () => {
+      const regResult = await tracker.usersRegister("alice");
+      if (regResult.result !== "OK") throw new Error("Register failed");
+      process.env.TRACKGENTIC_USER_TOKEN = regResult.token;
+
+      // Pass explicit author param — should take precedence over auth
+      const result = await tracker.create({ title: "Override", author: "custom" });
+      if ("id" in result) {
+        const issuePath = join(testDir, ".trackgentic", "issues", `${result.id}.json`);
+        const events = JSON.parse(readFileSync(issuePath, "utf-8"));
+        expect(events[0].author).toBe("custom");
       }
     });
   });

@@ -2,26 +2,28 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: Phase 2 complete — ready for Phase 3 implementation
-  source_code: Phase 1+2 implemented (full event engine, index manager, CRUD operations, CLI commands)
+  phase: Phase 3 complete — ready for Phase 4 implementation
+  source_code: Phase 1+2+3 implemented (event engine, CRUD, auth system, user management, CLI user commands)
   monorepo_files:
     - package.json (root workspace config)
-    - packages/library/package.json (11 scripts, biome + typedoc + typescript + @types/bun)
+    - packages/library/package.json (11 scripts, eslint + prettier + typedoc + typescript + @types/bun)
     - packages/library/tsconfig.json (ESNext, strict + 4 extra flags, bun-types)
     - packages/library/bunfig.toml (coverage enabled)
-    - packages/library/biome.json (Biome v2.4.15 config)
+    - packages/library/.prettierrc (Prettier config)
+    - packages/library/eslint.config.js (ESLint flat config with typescript-eslint)
     - packages/library/typedoc.json (TypeDoc config)
     - bun.lockb (generated)
   dependencies_installed: true
   documentation: complete — all 5 doc files are thorough and implementation-ready
-  specifications: complete — 6 spec files in .agentic/specs/ covering architecture, data model, API, CLI, implementation phases, and quality plan
+  specifications: complete — 7 spec files in .agentic/specs/
   agentic_infra: complete — .claude/ agents, skills, hooks, and expertise system working
   quality_plan:
     spec: .agentic/specs/06-quality-plan.md
-    linting: Biome v2.4.15 installed and configured (biome.json), zero errors
-    typechecking: TypeScript strict + 4 extra flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature), zero errors
-    testing: Bun test runner with coverage, 99.11% overall, bunfig.toml configured
-    documentation: TypeDoc v0.28.19 + typedoc-plugin-markdown v4.11.0, parses cleanly
+    linting: ESLint ^9.28 + typescript-eslint ^8.33 (replaced Biome), zero errors
+    formatting: Prettier ^3.5.3 (replaced Biome formatter), zero issues
+    typechecking: TypeScript strict + 4 extra flags, zero errors
+    testing: Bun test runner with coverage, 99.22% overall
+    documentation: TypeDoc parses cleanly
     status: fully implemented — all quality gates passing
     test_helpers: setup.ts, fixtures.ts, assertions.ts created in tests/helpers/
   phase_1_results:
@@ -39,28 +41,39 @@ current_state:
     typecheck: clean (strict + 4 extra flags)
     lint: clean (37 files, zero errors)
     docs_check: clean (TypeDoc parses all source)
+  phase_3_results:
+    tests: 167 passing, 846 assertions, 99.22% coverage (100% functions, 99.22% lines)
+    typecheck: clean (strict + 4 extra flags)
+    lint: clean (ESLint, zero errors)
+    format: clean (Prettier, zero issues)
+    docs_check: clean (TypeDoc parses all source)
     coverage_by_file:
+      auth.ts: 100%/100%
+      tracker.ts: 100%/100%
       errors.ts: 100%/100%
       events.ts: 100%/100%
       file-io.ts: 100%/100%
       id.ts: 100%/100%
       index-manager.ts: 100%/100%
       resolution.ts: 100%/93.75% (V8 artifact)
-      tracker.ts: 100%/100%
     new_files:
-      core: events.ts, index-manager.ts (full implementations replacing stubs)
-      cli_commands: create.ts, list.ts, view.ts, update.ts, history.ts
-      tests: events.test.ts, index-manager.test.ts, file-io.test.ts
+      tests: tests/core/auth.test.ts (13 tests)
     modified_files:
-      core: tracker.ts (added create, list, view, update, history methods)
-      cli: runner.ts (registered all new commands)
-      tests: tracker.test.ts, commands.test.ts (extended with Phase 2 tests)
+      core: auth.ts (full implementation replacing stub), tracker.ts (added user methods + auth integration), errors.ts (added auth error codes)
+      cli: commands/users.ts (register/list/revoke/regenerate), runner.ts (registered users commands)
+      tests: tracker.test.ts (+23 tests), commands.test.ts (+9 tests)
+    tooling_changes:
+      - Removed Biome (biome.json deleted, @biomejs/biome removed)
+      - Added Prettier ^3.5.3 with .prettierrc config
+      - Added ESLint ^9.28 + typescript-eslint ^8.33 with eslint.config.js flat config
+      - Updated scripts: quality = typecheck + lint + test:coverage
     design_decisions:
-      - computeState refactored into applyUpdate helper to satisfy Biome cognitive complexity limit
-      - appendEvent uses non-atomic writeFile (not atomicWriteJSON) since issue files are append-only
-      - Tracker CRUD defaults author to "anonymous" — auth integration is Phase 3
-      - Index manager uses immutable pattern (returns new IndexFile objects)
-      - Binary search O(log n) for all index lookups
+      - Default auth mode changed from "read-only" to "open" for development ergonomics (users can switch to read-only/strict in production)
+      - resolveAuthor reads token from process.env.TRACKGENTIC_USER_TOKEN
+      - Auth resolution is synchronous (in-memory lookup only)
+      - Token format: tk_ + 8 random alphanumeric chars
+      - User names stored lowercase, "anonymous" reserved
+      - usersRegister is the only operation that doesn't require auth (bootstrap mechanism)
   last_updated: "2026-05-10"
   blockers: []
 
@@ -70,12 +83,16 @@ implementation_roadmap:
     phase_1_foundation:
       description: "Project setup, types, ID generation, directory resolution, file I/O, init command, CLI runner"
       exit_criteria: "trackgentic init creates .trackgentic/ with correct files, idempotent on re-run"
+      status: complete
     phase_2_event_engine_and_crud:
       description: "Event append/replay engine, index manager with binary search, create/update/list/view/history"
       exit_criteria: "Full CRUD cycle works: create → list → view → update → view → history"
+      status: complete
     phase_3_auth_and_users:
       description: "Auth module (token resolution, mode enforcement), user CRUD (register/list/revoke/regenerate)"
       exit_criteria: "Token-based auth enforced per mode, author in all events"
+      status: complete
+      notes: "Default auth mode changed to 'open' for dev ergonomics. Tooling swapped from Biome to Prettier + ESLint."
     phase_4_comments:
       description: "Comment lifecycle: add/update/delete/list with event replay"
       exit_criteria: "Full comment CRUD with computed state from event replay"

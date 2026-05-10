@@ -4,6 +4,12 @@ import { historyAction } from "./commands/history";
 import { initAction } from "./commands/init";
 import { listAction } from "./commands/list";
 import { updateAction } from "./commands/update";
+import {
+  usersListAction,
+  usersRegenerateAction,
+  usersRegisterAction,
+  usersRevokeAction,
+} from "./commands/users";
 import { viewAction } from "./commands/view";
 
 /**
@@ -73,6 +79,23 @@ export function createProgram(): Command {
     .command("history <issueId>")
     .description("View an issue's raw event history")
     .action(historyAction);
+
+  // ─── users ────────────────────────────────────────────────────────
+  const usersCmd = program.command("users").description("Manage users");
+
+  usersCmd
+    .command("register <name>")
+    .description("Register a new user")
+    .action(usersRegisterAction);
+
+  usersCmd.command("list").description("List registered users").action(usersListAction);
+
+  usersCmd.command("revoke <name>").description("Revoke (remove) a user").action(usersRevokeAction);
+
+  usersCmd
+    .command("regenerate <name>")
+    .description("Regenerate a user's token (self-service only)")
+    .action(usersRegenerateAction);
 
   return program;
 }

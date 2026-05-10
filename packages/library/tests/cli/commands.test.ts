@@ -24,11 +24,19 @@ describe("CLI commands", () => {
   async function runCLI(
     ...args: string[]
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    return runCLIWithEnv({}, ...args);
+  }
+
+  async function runCLIWithEnv(
+    env: Record<string, string>,
+    ...args: string[]
+  ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const proc = spawn({
       cmd: ["bun", "run", BIN_PATH, ...args],
       cwd: testDir,
       stdout: "pipe",
       stderr: "pipe",
+      env: { ...process.env, ...env },
     });
 
     const stdout = await new Response(proc.stdout).text();
@@ -334,6 +342,143 @@ describe("CLI commands", () => {
 
       const result = JSON.parse(stderr.trim());
       expect(result.result).toBe("ISSUE_MISSING");
+    });
+  });
+
+  // ─── Users CLI Tests ────────────────────────────────────────────
+
+  describe("users register", () => {
+    test("creates a user and returns token", async () => {
+      await runCLI("init");
+
+      const { stdout, stderr, exitCode } = await runCLI("users", "register", "Alice");
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+      expect(result.name).toBe("alice");
+      expect(result.token).toMatch(/^tk_[a-z0-9]{8}$/);
+    });
+
+    test("rejects duplicate name", async () => {
+      await runCLI("init");
+      await runCLI("users", "register", "alice");
+
+      const { stdout } = await runCLI("users", "register", "alice");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("USER_ALREADY_EXISTS");
+    });
+
+    test('rejects "anonymous" as reserved name', async () => {
+      await runCLI("init");
+
+      const { stdout } = await runCLI("users", "register", "anonymous");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("USER_ALREADY_EXISTS");
+    });
+  });
+
+  describe("users list", () => {
+    test("shows registered users without tokens", async () => {
+      await runCLI("init");
+      await runCLI("users", "register", "alice");
+      await runCLI("users", "register", "bob");
+
+      const { stdout, stderr, exitCode } = await runCLI("users", "list");
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe("alice");
+      expect(result[1].name).toBe("bob");
+      // Tokens must not be present
+      for (const user of result) {
+        expect("token" in user).toBe(false);
+        expect(user.registeredAt).toBeTruthy();
+      }
+    });
+  });
+
+  describe("users revoke", () => {
+    test("removes a user", async () => {
+      await runCLI("init");
+      await runCLI("users", "register", "alice");
+
+      const { stdout, stderr, exitCode } = await runCLI("users", "revoke", "alice");
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+
+      // Verify user is gone
+      const listOutput = JSON.parse((await runCLI("users", "list")).stdout.trim());
+      expect(listOutput).toHaveLength(0);
+    });
+
+    test("rejects non-existent user", async () => {
+      await runCLI("init");
+
+      const { stderr, exitCode } = await runCLI("users", "revoke", "nonexistent");
+
+      expect(exitCode).toBe(1);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("USER_NOT_FOUND");
+    });
+  });
+
+  describe("users regenerate", () => {
+    test("issues new token with own token via env var", async () => {
+      await runCLI("init");
+
+      const regOutput = JSON.parse(
+        (await runCLI("users", "register", "alice")).stdout.trim(),
+      );
+      const oldToken = regOutput.token;
+
+      const { stdout, stderr, exitCode } = await runCLIWithEnv(
+        { TRACKGENTIC_USER_TOKEN: oldToken },
+        "users",
+        "regenerate",
+        "alice",
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("OK");
+      expect(result.name).toBe("alice");
+      expect(result.token).toMatch(/^tk_[a-z0-9]{8}$/);
+      expect(result.token).not.toBe(oldToken);
+    });
+
+    test("rejects when different user tries to regenerate", async () => {
+      await runCLI("init");
+      await runCLI("users", "register", "alice");
+      const bobOutput = JSON.parse(
+        (await runCLI("users", "register", "bob")).stdout.trim(),
+      );
+
+      const { stderr, exitCode } = await runCLIWithEnv(
+        { TRACKGENTIC_USER_TOKEN: bobOutput.token },
+        "users",
+        "regenerate",
+        "alice",
+      );
+
+      expect(exitCode).toBe(3);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("INVALID_TOKEN");
     });
   });
 });
