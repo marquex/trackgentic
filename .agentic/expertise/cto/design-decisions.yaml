@@ -152,3 +152,18 @@ decisions:
     tradeoffs:
       - "Adds one dependency (acceptable — widely used, stable)"
     status: decided
+
+  - id: DD-014
+    title: "Biome for linting alongside strict TypeScript"
+    choice: "Use Biome as linter+formatter in addition to tsc --noEmit for type checking"
+    rationale:
+      - "Catches code quality issues tsc misses: unused variables/imports, cognitive complexity, non-null assertions as code smell"
+      - "Enforces consistent formatting without needing Prettier (Biome is formatter+linter in one)"
+      - "Cognitive complexity rule (limit 15) enforced refactoring of computeState into focused helpers"
+      - "Compounds over phases — consistency enforcement pays for itself as codebase grows through phases 3-7"
+    tradeoffs:
+      - "Occasional tension with TypeScript strict flags — noPropertyAccessFromIndexSignature requires bracket notation on Record types, but Biome UseLiteralKeys wants dot notation"
+      - "Resolution: prefer typed interfaces over Record<string, T> to avoid the conflict entirely"
+      - "Moderate value for small team but worth keeping; specific rules can be relaxed in biome.json if conflicts become recurring time sink"
+    status: decided
+    decided_date: "2026-05-10"

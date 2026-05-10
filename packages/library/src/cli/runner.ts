@@ -1,9 +1,13 @@
 import { Command } from "commander";
+import { createAction } from "./commands/create";
+import { historyAction } from "./commands/history";
 import { initAction } from "./commands/init";
+import { listAction } from "./commands/list";
+import { updateAction } from "./commands/update";
+import { viewAction } from "./commands/view";
 
 /**
  * Create and configure the Commander program.
- * Structured so future phases can easily add commands.
  */
 export function createProgram(): Command {
   const program = new Command();
@@ -18,6 +22,57 @@ export function createProgram(): Command {
     .command("init")
     .description("Initialize a new .trackgentic/ directory")
     .action(initAction);
+
+  // ─── create ───────────────────────────────────────────────────────
+  program
+    .command("create <title>")
+    .description("Create a new issue")
+    .option("--description <string>", "Issue description")
+    .option("--assignee <string>", "Assignee name")
+    .option("--tags <comma-separated>", "Comma-separated tags")
+    .option("--status <status>", 'Issue status (default: "idea")')
+    .option("--priority <number>", "Priority 1-5 (default: 3)")
+    .option("--parentId <id>", "Parent issue ID")
+    .option("--path <string>", "Custom file path for the issue")
+    .action(createAction);
+
+  // ─── list ─────────────────────────────────────────────────────────
+  program
+    .command("list")
+    .description("List issues")
+    .option(
+      "--status <status>",
+      'Filter by status (use "open" for non-closed, "closed" for closed)',
+    )
+    .option("--assignee <string>", "Filter by assignee")
+    .option("--tags <comma-separated>", "Comma-separated tags (AND filter)")
+    .option("--parentId <id>", 'Filter by parent ID (use "null" for top-level)')
+    .action(listAction);
+
+  // ─── view ─────────────────────────────────────────────────────────
+  program
+    .command("view <issueId>")
+    .description("View an issue's full computed state")
+    .action(viewAction);
+
+  // ─── update ───────────────────────────────────────────────────────
+  program
+    .command("update <issueId>")
+    .description("Update an existing issue")
+    .option("--title <string>", "New title")
+    .option("--description <string>", "New description")
+    .option("--status <status>", "New status")
+    .option("--assignee <string>", "New assignee")
+    .option("--tags <comma-separated>", "New tags (replaces existing)")
+    .option("--priority <number>", "New priority (1-5)")
+    .option("--parentId <id>", 'New parent ID (use "null" to detach)')
+    .action(updateAction);
+
+  // ─── history ──────────────────────────────────────────────────────
+  program
+    .command("history <issueId>")
+    .description("View an issue's raw event history")
+    .action(historyAction);
 
   return program;
 }

@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 1 complete. Agent handoff workflow enforced via system prompts: library-developer self-checks typecheck+lint+test, library-quality runs full quality gate + generates missing tests + docs:check. No need to repeat these in delegation messages. All quality gates passing (18 tests, 433 assertions, 88.91% coverage). Ready to delegate Phase 2."
+expertise_status: "Phase 2 complete. Event engine, index manager, full CRUD (create/list/view/update/history), and CLI commands implemented. 122 tests, 742 assertions, 99.11% coverage (100% functions). All quality gates passing. Ready to delegate Phase 3."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Phase 1 complete, quality tooling operational (Biome + TypeDoc + strict TS), ready for Phase 2
+  stage: Phase 2 complete (event engine + CRUD), ready for Phase 3 (auth + users)
   bun_version: "1.3.11"
 
 detail_files:
@@ -110,3 +110,9 @@ session_log:
   - session: 16
     date: "2026-05-10"
     summary: "User emphasized: always delegate to library-quality after every library-developer code change. Added mandatory_sequence to delegation_workflow in expertise: developer (implement) → quality (validate). Never skip the quality step. Renamed delegation_templates to delegation_workflow for clarity."
+  - session: 17
+    date: "2026-05-10"
+    summary: "Delegated Phase 2 (Event Engine & CRUD) to library-developer. Implementation completed: event engine (appendEvent, replayEvents, computeState), index manager (binary search, immutable operations), Tracker CRUD (create, list, view, update, history), 5 CLI commands. Developer hit strict TS + Biome tension (noPropertyAccessFromIndexSignature vs UseLiteralKeys, cognitive complexity). Resolved by refactoring. Delegated to library-quality for validation: all gates pass, 122 tests, 742 assertions, 99.11% coverage (100% functions). Quality added 19 new tests covering gaps (file-io error paths, index-manager edge cases, tracker error codes). Phase 2 complete."
+  - session: 18
+    date: "2026-05-10"
+    summary: "User asked about Biome vs tsc value. Explained complementary roles: tsc catches type errors, Biome catches code quality issues (unused vars, cognitive complexity, formatting). Documented the TS/Biome tension pattern (noPropertyAccessFromIndexSignature vs UseLiteralKeys) and resolution (typed interfaces over Record). Added DD-014 (Biome for linting alongside strict TypeScript) to design-decisions.yaml."
