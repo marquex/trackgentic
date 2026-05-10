@@ -6,25 +6,34 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Phase 1 complete — foundation implemented. 18 tests passing, typecheck clean."
+expertise_status: "Phase 1-3 complete. 167 tests passing, 99.22% line coverage, typecheck & lint clean."
 
 knowledge:
   project_structure:
     - "Monorepo: root workspace with packages/library (the npm package)"
     - "Package entry: src/index.ts (barrel exports), src/bin.ts (CLI with shebang)"
     - "Types in src/types/, core logic in src/core/, CLI in src/cli/"
+    - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users)"
     - "Tests in tests/ using bun:test (describe/test/expect)"
-    - "Empty stubs for Phase 2+: events.ts, index-manager.ts, dependency-manager.ts, auth.ts"
+    - "Test helpers in tests/helpers/ (setup.ts, fixtures.ts, assertions.ts)"
+    - "Test structure mirrors src: tests/core/, tests/cli/ (no tests/integration/ yet — empty dir)"
+    - "dependency-manager.ts still a stub (Phase 6)"
 
   build_and_run:
     - "Bun runtime — bun test for tests, bun run src/bin.ts for CLI"
     - "TypeScript typecheck: bun run typecheck (runs tsc --noEmit via npm script)"
     - "bun x tsc doesn't work (resolves wrong tsc); must use npm script or full path"
     - "tsconfig uses types: ['@types/bun'] not 'bun-types'"
+    - "Linting: ESLint 9 + typescript-eslint (flat config: eslint.config.js)"
+    - "Formatting: Prettier (semi: true, double quotes, trailing comma: all, printWidth: 100)"
+    - "Scripts: lint, lint:fix, format, format:check, docs:generate, docs:check, quality"
+    - "Quality script: typecheck + lint + test:coverage in one command"
 
   dependencies:
     - "commander ^13.0.0 for CLI argument parsing"
     - "typescript ^5.7.0 and @types/bun ^1.2.0 as devDependencies"
+    - "@eslint/js ^9.28.0, eslint ^9.28.0, typescript-eslint ^8.33.0, prettier ^3.5.3 as devDependencies"
+    - "typedoc ^0.28.19 and typedoc-plugin-markdown ^4.11.0 as devDependencies"
     - "No other runtime deps — all file I/O via node:fs/node:path"
 
   architecture:
@@ -36,6 +45,15 @@ knowledge:
     - "Resolution: walk up from cwd looking for .trackgentic/ dir, return abs path or null"
     - "Tracker.init() creates .trackgentic/ with config.json, index.json, dependencies.json, users.json, issues/"
     - "Init is idempotent: returns ALREADY_INITIALIZED if dir exists, does NOT overwrite"
+    - "Event-sourced: each issue stored as JSON array of events in issues/[id].json"
+    - "Two events on creation: creation event + update event with initial fields"
+    - "computeState() replays events to produce ComputedIssue (title, desc, status, priority, assignee, parentId, tags)"
+    - "Index manager maintains sorted arrays (open/closed) + childrenOf map for fast lookups"
+    - "Index entries updated on create/update; binary search for lookups"
+    - "Auth: resolveAuthor() checks token -> mode (open/read-only/strict) -> defaultUser fallback"
+    - "Auth reads TRACKGENTIC_USER_TOKEN env var; tokens are tk_ + 8 random alphanumeric chars"
+    - "Users register is bootstrap (no auth required); list requires read auth; revoke/regenerate require write auth"
+    - "Token regeneration is self-service only (caller must be the target user)"
 
   type_system:
     - "All types match spec 02-data-model.md and 03-api-specification.md exactly"
@@ -43,18 +61,38 @@ knowledge:
     - "InitResult is special: ALREADY_INITIALIZED is a valid return (not an error), exit code 0"
     - "UsersRegisterResult, UsersRevokeResult, UsersRegenerateResult use discriminated unions with result field"
     - "TrackgenticError extends Error with result, message, exitCode fields"
-    - "ErrorCodes const object maps error names to {result, exitCode} — 13 error codes defined"
+    - "ErrorCodes const object maps error names to {result, exitCode} — 13 error codes defined (exit codes 0-12)"
+    - "Event union: CreationEvent | UpdateEvent | CommentEvent | CommentUpdateEvent | CommentDeleteEvent | BlockageAddedEvent | BlockageResolvedEvent | BlockageDeletedEvent"
+    - "ComputedIssue: id, title, description, status, priority, assignee, parentId, tags, createdAt, createdBy, updatedAt"
+    - "IndexEntry: id, title, path, status, assignee, parentId, tags, priority (denormalized for fast list/filter)"
+    - "IndexFile: open[], closed[], childrenOf Record<string, string[]>"
+    - "UserEntry: name (lowercase), token, registeredAt; UserInfo: name, registeredAt (no token)"
 
   testing_patterns:
-    - "Tests use tmpdir() for isolation with beforeEach/afterEach cleanup"
+    - "Tests use createTestDir() from tests/helpers/setup.ts for isolation with cleanup"
     - "CLI tests use Bun.spawn to run bin.ts as subprocess, check stdout/stderr/exitCode"
     - "ID tests verify length (10), format (base36), and uniqueness (100 samples)"
+    - "167 tests across 8 files: auth, events, file-io, id, index-manager, resolution, tracker, CLI commands"
+    - "99.22% line coverage (only resolution.ts has 93.75% — edge cases in walk-up logic)"
+    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker}.test.ts + tests/cli/commands.test.ts"
+
+  cli_commands:
+    - "init — no args, creates .trackgentic/ dir"
+    - "create <title> — options: --description, --assignee, --tags (comma-sep), --status, --priority, --parentId, --path"
+    - "list — options: --status, --assignee, --tags (comma-sep), --parentId ('null' for top-level)"
+    - "view <issueId> — shows full computed state"
+    - "update <issueId> — options: --title, --description, --status, --assignee, --tags, --priority, --parentId ('null' to detach)"
+    - "history <issueId> — shows raw event array"
+    - "users register <name> — registers a new user"
+    - "users list — lists registered users (tokens stripped)"
+    - "users revoke <name> — removes a user"
+    - "users regenerate <name> — regenerates token (self-service only)"
 
   phase_status:
-    phase_1: "COMPLETE — types, core (errors, id, resolution, file-io, tracker.init), CLI (runner, output, init cmd), barrel exports, 18 tests all passing, typecheck clean"
-    phase_2: "NOT STARTED — event engine, index manager, CRUD (create/list/view/update/history)"
-    phase_3: "NOT STARTED — auth system, user management"
-    phase_4: "NOT STARTED — comments"
+    phase_1: "COMPLETE — types, core (errors, id, resolution, file-io, tracker.init), CLI (runner, output, init cmd), barrel exports"
+    phase_2: "COMPLETE — event engine (events.ts: appendEvent, replayEvents, computeState), index manager (index-manager.ts: binary search, insert/update/find/remove entries), CRUD (create/list/view/update/history), CLI commands for all CRUD operations"
+    phase_3: "COMPLETE — auth system (auth.ts: resolveAuthor with open/read-only/strict modes, token validation, env var lookup), user management (usersRegister, usersList, usersRevoke, usersRegenerate), CLI users commands"
+    phase_4: "NOT STARTED — comments (add/update/delete/list)"
     phase_5: "NOT STARTED — issue hierarchy"
-    phase_6: "NOT STARTED — blockages & dependencies"
+    phase_6: "NOT STARTED — blockages & dependencies (dependency-manager.ts still a stub)"
     phase_7: "NOT STARTED — polish & hardening"

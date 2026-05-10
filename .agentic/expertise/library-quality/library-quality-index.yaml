@@ -6,32 +6,105 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — quality plan implemented, tooling configured."
+expertise_status: "Active — Phases 1-3 complete. 167 tests, 99.22% line coverage. Prettier + ESLint tooling."
 
-learnings:
-  biome:
-    - "Biome 2.x uses different config format than 2.0.0 schema. Use `biome migrate --write` to auto-migrate config."
-    - "`organizeImports` was renamed to `assist.actions.source.organizeImports` in Biome 2.x."
-    - "`noVar` rule was moved from `style` to `suspicious` in Biome 2.x."
-    - "Some fixes are 'unsafe' and require `--unsafe` flag with `--write`."
-    - "`noNonNullAssertion` rule catches `!` operator usage — use proper null checks instead."
-  bun_coverage:
-    - "Bun's `coverageThreshold` in bunfig.toml applies per-file, not just overall."
-    - "file-io.ts has 61.90% coverage (below 80%) due to untested error paths in atomicWriteJSON."
-    - "Set coverageThreshold to 0 to report coverage without failing the test run on per-file thresholds."
-  typescript:
-    - "The 4 extra strict flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature) did NOT cause any typecheck errors in current code."
-    - "Current code uses `as const` patterns and explicit typing that's already compatible with strict flags."
-  typedoc:
-    - "TypeDoc with typedoc-plugin-markdown parses all source files without errors."
-    - "The `--emit none` flag is useful for CI validation without generating files."
+project_phases:
+  phase_1_foundation:
+    status: complete
+    modules: [id, file-io, resolution, index-manager, tracker (init/create/list/view/update/history)]
+  phase_2_event_system:
+    status: complete
+    modules: [events (appendEvent, replayEvents, computeState), types/event.ts]
+    description: "Event-sourced issue model — creation, update, comment, comment-update, comment-delete, blockage-added, blockage-resolved, blockage-deleted"
+  phase_3_auth_users:
+    status: complete
+    modules: [auth (resolveAuthor), types/user.ts, types/config.ts, CLI users commands]
+    description: "Three auth modes (open/read-only/strict), user registration with tokens, CLI users register/list/revoke/regenerate"
+  phase_4_dependency_graph:
+    status: future
+    modules: [dependency-manager.ts — placeholder only]
+  phase_5_workflow_rules:
+    status: planned
+  phase_6_cli_refinement:
+    status: planned
+
+source_layout:
+  total_lines: 1993
+  types: [api.ts (134 lines), event.ts (106), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
+  core: [tracker.ts (597), index-manager.ts (161), events.ts (108), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), dependency-manager.ts (2, placeholder), id.ts (18)]
+  cli: [runner.ts (101), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13), bin.ts (5)]
+  public_api: "src/index.ts re-exports Tracker class, TrackgenticError, all type and response type aliases"
+
+test_layout:
+  total_tests: 167
+  total_expect_calls: 846
+  total_lines: 2704
+  test_helpers: [helpers/setup.ts (createTestDir, cleanupTestDir), helpers/fixtures.ts (createIssueParams, updateIssueParams), helpers/assertions.ts (expectError, expectOk)]
+  files:
+    core_tracker: { tests: 74, lines: 1136, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration] }
+    cli_commands: { tests: 27, lines: 484, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate] }
+    core_index_manager: { tests: 22, lines: 284, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry] }
+    core_events: { tests: 15, lines: 336, describes: [computeState, appendEvent, replayEvents] }
+    core_auth: { tests: 13, lines: 204, describes: [open mode, read-only mode, strict mode, env var fallback] }
+    core_id: { tests: 8, lines: 52, describes: [generateId, generateCommentId] }
+    core_file_io: { tests: 6, lines: 90, describes: [atomicWriteJSON, readJSON] }
+    core_resolution: { tests: 4, lines: 57, describes: [resolveTrackerDir] }
 
 current_coverage:
-  overall_line: 88.91%
-  overall_func: 91.67%
-  file_io: 61.90%  # needs tests for error paths
-  id: 100%
-  resolution: 93.75%
-  tracker: 100%
+  overall_line: 99.22%
+  overall_func: 100.00%
+  per_file:
+    auth: 100%
+    errors: 100%
+    events: 100%
+    file_io: 100%  # was 61.90% — error paths now tested
+    id: 100%
+    index_manager: 100%
+    resolution: 93.75%  # filesystem root walk-up path untested
+    tracker: 100%
 
-test_count: 18  # across 4 test files
+tooling:
+  formatter: prettier (v3.5.3)
+  prettier_config: { semi: true, singleQuote: false, tabWidth: 2, trailingComma: "all", printWidth: 100 }
+  linter: eslint (v9.28.0) with typescript-eslint (v8.33.0)
+  eslint_highlights:
+    - "Flat config (eslint.config.js), not legacy .eslintrc"
+    - "no-explicit-any set to warn, not error"
+    - "Unused vars with _ prefix ignored (argsIgnorePattern + varsIgnorePattern)"
+  test_runner: bun test (v1.3.11)
+  coverage: "bun test --coverage with coverageThreshold=0 in bunfig.toml (report only, no per-file gate)"
+  typechecker: "tsc --noEmit with strict + 4 extra flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature)"
+  docs: "typedoc v0.28 with typedoc-plugin-markdown, validated via typedoc --emit none"
+  quality_gate: "bun run quality = typecheck + lint + test:coverage (all must pass)"
+
+learnings:
+  biome:  # DEPRECATED — Biome removed, Prettier + ESLint in use
+    - "Biome was replaced by Prettier + ESLint in Phase 3. These learnings are historical only."
+  eslint_prettier:
+    - "ESLint flat config uses `import.meta.dirname` for tsconfigRootDir."
+    - "typescript-eslint recommended config + eslint recommended is the base."
+    - "Separate rules blocks for src/ and tests/ — tests don't use projectService."
+  bun_coverage:
+    - "Bun's coverageThreshold in bunfig.toml applies per-file, not just overall."
+    - "coverageThreshold=0 means report coverage without failing on per-file thresholds."
+    - "Current coverage: 99.22% line, 100% function across all source files."
+  typescript:
+    - "4 extra strict flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature) are enabled and pass clean."
+    - "noPropertyAccessFromIndexSignature requires bracket notation for dynamic keys (e.g. process.env['TRACKGENTIC_USER_TOKEN'])."
+    - "exactOptionalPropertyTypes means `undefined` cannot be assigned to optional properties explicitly."
+  typedoc:
+    - "TypeDoc with typedoc-plugin-markdown parses all source files without errors."
+    - "The --emit none flag is useful for CI validation without generating files."
+    - "Config: excludePrivate=true, excludeInternal=true, categorizeByGroup=true, categoryOrder=[Core, Types, Errors, *]"
+  testing_patterns:
+    - "Test helpers: createTestDir/cleanupTestDir for fs isolation, createIssueParams/updateIssueParams factory functions, expectError/expectOk assertions."
+    - "Tracker tests use real filesystem (tmpdir) — no mocks. This gives integration-level confidence."
+    - "Each test file uses beforeEach to create a fresh test directory and afterEach to clean up."
+    - "CLI command tests spawn the CLI via bun subprocess and check stdout/exit codes."
+    - "auth.test.ts tests resolveAuthor in isolation — doesn't need Tracker instance."
+    - "events.test.ts tests computeState, appendEvent, replayEvents — pure functions + fs."
+    - "resolution.ts has 93.75% coverage — the filesystem-root walk-up edge case (parent === current) is untested."
+  error_handling:
+    - "TrackgenticError carries result code, message, and exitCode. 12 error codes defined."
+    - "ErrorCodes: NOT_INITIALIZED, ALREADY_INITIALIZED, TOKEN_REQUIRED, INVALID_TOKEN, DEFAULT_USER_MISSING, NOT_FOUND, ISSUE_MISSING, COMMENT_NOT_FOUND, USER_ALREADY_EXISTS, USER_NOT_FOUND, INVALID_PARAMS, BLOCKAGE_CYCLE, HIERARCHY_CONSTRAINT."
+    - "Both error codes BLOCKAGE_CYCLE (exit 11) and HIERARCHY_CONSTRAINT (exit 12) are defined but not yet used — Phase 4+."

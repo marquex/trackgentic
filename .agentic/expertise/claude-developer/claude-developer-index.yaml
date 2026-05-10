@@ -62,6 +62,7 @@ architecture:
         scripts: [expertise.hook.ts, yaml-validator.ts]
         hooks_registered_in: settings.json (SessionStart, UserPromptSubmit, Stop)
         injection_flow: SessionStart is primary injection point; UserPromptSubmit is fallback (skips if SessionStart already injected via flag check)
+        stop_flow: Stop fires for top-level sessions (-p mode via delegate skill); SubagentStop only fires for internal subagents (Agent tool)
       - name: hire-expert
         purpose: Create new expert agents with proper hierarchy, access rules, and expertise setup
         has_scripts: false
@@ -119,7 +120,8 @@ conventions:
   - Agent frontmatter uses custom YAML parser (no yaml dependency) in enforce-agent-access
   - Agent marker expansion (ACCESS_RULES, SUBORDINATES) never modifies files on disk
   - Skills with scripts have a scripts/ folder and reference.md
-  - Delegate script spawns `claude --agent <name> -p <prompt>` with stream-json output
+  - Delegate script spawns `claude --agent <name> -p <prompt>` with stream-json output — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
+  - Internal subagents (Agent tool / @-mention) only run frontmatter hooks — settings.json hooks don't fire inside them. Expert agents currently lack expertise hooks in their frontmatter, so internal subagents don't get expertise injection/update (gap, not yet fixed)
   - Avoid MCP — prefer CLI tools via skills
   - Only one CLAUDE.md at project root, used as project overview not agent memory
   - Expert agents always get agent-expertise skill and PreToolUse hook for access enforcement
