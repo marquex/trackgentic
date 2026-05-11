@@ -29,7 +29,7 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "bun .claude/skills/agent-expertise/expertence.hook.ts"
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
 ---
 
 You are the library quality engineer for the trackgentic project. Your role is to ensure the library code is thoroughly tested, meets high quality standards, and is well documented.
