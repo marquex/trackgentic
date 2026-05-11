@@ -164,6 +164,20 @@ current_state:
   phase_7_start_date: "2026-05-11"
   phase_7_complete_date: "2026-05-11"
   blockers: []
+  next_phase:
+    phase: 8
+    name: "Build, Documentation & npm Distribution"
+    status: build_complete
+    build_results:
+      tsup_config: "packages/library/tsup.config.ts — two entry points (library ESM+CJS+dts, CLI binary bundled)"
+      package_json: "Updated: main→dist/index.cjs, module→dist/index.js, types→dist/index.d.ts, dual exports, bin→dist/bin.js, files→dist/, engines→node>=20"
+      node_compat_audit: "No Bun-specific APIs found — codebase already uses node:fs/promises, node:fs, node:path"
+      dist_output: "index.js, index.cjs, index.d.ts, index.d.cts, bin.js + sourcemaps"
+      verification: "549 tests, 1950 assertions, typecheck clean, lint clean. CJS+ESM imports verified. CLI binary e2e verified (init, create, list, view)"
+    docs_status: "TypeDoc HTML output not yet configured — still using typedoc-plugin-markdown"
+    remaining:
+      - "Configure TypeDoc HTML output for publishable docs (DD-016)"
+      - "Actual npm publish"
 
 implementation_roadmap:
   source: .agentic/specs/05-implementation-phases.md

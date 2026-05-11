@@ -10,11 +10,24 @@ describe("Package Configuration", () => {
     expect(pkg.name).toBe("trackgentic");
     expect(pkg.version).toBe("0.1.0");
     expect(pkg.type).toBe("module");
-    expect(pkg.main).toBe("src/index.ts");
-    expect(pkg.types).toBe("src/index.ts");
-    expect(pkg.exports).toEqual({ ".": "./src/index.ts" });
-    expect(pkg.bin).toEqual({ trackgentic: "./src/bin.ts" });
-    expect(pkg.files).toEqual(["src/"]);
+    expect(pkg.main).toBe("./dist/index.cjs");
+    expect(pkg.module).toBe("./dist/index.js");
+    expect(pkg.types).toBe("./dist/index.d.ts");
+    expect(pkg.exports).toEqual({
+      ".": {
+        import: {
+          types: "./dist/index.d.ts",
+          default: "./dist/index.js",
+        },
+        require: {
+          types: "./dist/index.d.cts",
+          default: "./dist/index.cjs",
+        },
+      },
+    });
+    expect(pkg.bin).toEqual({ trackgentic: "./dist/bin.js" });
+    expect(pkg.files).toEqual(["dist/"]);
+    expect(pkg.engines).toEqual({ node: ">=20.0.0" });
     expect(pkg.description).toBeString();
     expect(pkg.description.length).toBeGreaterThan(0);
     expect(pkg.scripts.prepublishOnly).toBe("bun run quality");

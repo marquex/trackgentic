@@ -6,33 +6,38 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Phase 1-7 complete (all implementation phases done). 549 tests passing (1948 assertions), typecheck & lint clean."
+expertise_status: "Phase 1-8 complete. 549 tests passing (1950 assertions), typecheck & lint clean. Build pipeline with tsup producing CJS+ESM+dts output."
 
 knowledge:
   project_structure:
     - "Monorepo: root workspace with packages/library (the npm package)"
-    - "Package entry: src/index.ts (barrel exports), src/bin.ts (CLI with shebang)"
+    - "Package entry: src/index.ts (barrel exports), src/bin.ts (CLI entry, no hardcoded shebang — tsup banner adds it)"
     - "Types in src/types/, core logic in src/core/, CLI in src/cli/"
     - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users, comments, blockages)"
     - "Tests in tests/ using bun:test (describe/test/expect)"
     - "Test helpers in tests/helpers/ (setup.ts, fixtures.ts, assertions.ts)"
-    - "Test structure mirrors src: tests/core/, tests/cli/, tests/integration/ (edge-cases.test.ts, package.test.ts)"
+    - "Test structure: tests/core/ (unit), tests/core/events/ (event tests split by function), tests/core/tracker/ (tracker tests split by domain), tests/cli/, tests/integration/ (edge-cases.test.ts, package.test.ts)"
     - "dependency-manager.ts — blockage CRUD, impact scoring (getImpactScore with recursive BFS), cycle detection (detectCycle with DFS)"
     - "hierarchy.ts — pure functions for hierarchy validation and status cascade logic"
 
   build_and_run:
-    - "Bun runtime — bun test for tests, bun run src/bin.ts for CLI"
+    - "Bun runtime — bun test for tests, bun run src/bin.ts for CLI (dev), bun run build for production build"
+    - "Build: tsup v8.5.1 — two entry points: library (ESM+CJS+dts, commander external) and CLI binary (bundled, node shebang via banner)"
+    - "Build output: dist/index.js (ESM), dist/index.cjs (CJS), dist/index.d.ts, dist/index.d.cts, dist/bin.js + sourcemaps"
+    - "package.json: main→dist/index.cjs, module→dist/index.js, types→dist/index.d.ts, dual exports with types conditions, bin→dist/bin.js, files→['dist/'], engines→node>=20"
+    - "No Bun-specific APIs in codebase — all file I/O uses node:fs/promises (Node.js compatible)"
     - "TypeScript typecheck: bun run typecheck (runs tsc --noEmit via npm script)"
     - "bun x tsc doesn't work (resolves wrong tsc); must use npm script or full path"
     - "tsconfig uses types: ['@types/bun'] not 'bun-types'"
     - "Linting: ESLint 9 + typescript-eslint (flat config: eslint.config.js)"
     - "Formatting: Prettier (semi: true, double quotes, trailing comma: all, printWidth: 100)"
-    - "Scripts: lint, lint:fix, format, format:check, docs:generate, docs:check, quality"
+    - "Scripts: build (tsup), lint, lint:fix, format, format:check, docs:generate, docs:check, quality"
     - "Quality script: typecheck + lint + test:coverage in one command"
     - "prepublishOnly script: 'bun run quality' — runs quality gates before npm publish"
 
   dependencies:
-    - "commander ^13.0.0 for CLI argument parsing"
+    - "commander ^13.0.0 for CLI argument parsing (externalized in library build)"
+    - "tsup ^8.5.1 as devDependency — build tool for CJS+ESM+dts bundling"
     - "typescript ^5.7.0 and @types/bun ^1.2.0 as devDependencies"
     - "@eslint/js ^9.28.0, eslint ^9.28.0, typescript-eslint ^8.33.0, prettier ^3.5.3 as devDependencies"
     - "typedoc ^0.28.19 and typedoc-plugin-markdown ^4.11.0 as devDependencies"
@@ -90,8 +95,12 @@ knowledge:
     - "Tests use createTestDir() from tests/helpers/setup.ts for isolation with cleanup"
     - "CLI tests use Bun.spawn to run bin.ts as subprocess, check stdout/stderr/exitCode"
     - "ID tests verify length (10), format (base36), and uniqueness (100 samples)"
-    - "549 tests across 12 files: auth, events, file-io, id, index-manager, resolution, tracker, hierarchy, dependency-manager, CLI commands, integration/edge-cases, integration/package"
-    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker,hierarchy,dependency-manager}.test.ts + tests/cli/commands.test.ts + tests/integration/{edge-cases,package}.test.ts"
+    - "549 tests across 24 files (1950 assertions)"
+    - "Core unit tests: tests/core/{auth,file-io,id,index-manager,resolution,hierarchy,dependency-manager}.test.ts"
+    - "Core events tests (split by function): tests/core/events/{append-event,compute-comments,compute-state,replay-events}.test.ts"
+    - "Core tracker tests (split by domain): tests/core/tracker/{tracker-auth,tracker-blockages,tracker-comments,tracker-crud,tracker-errors,tracker-hierarchy,tracker-init,tracker-users}.test.ts"
+    - "CLI tests: tests/cli/commands.test.ts"
+    - "Integration tests: tests/integration/{edge-cases,package}.test.ts"
     - "Integration edge-case tests: empty tracker ops, invalid JSON corruption, missing file during ops, large event volume (100+ updates, 50+ comments), self-referencing/no-op"
     - "Package tests: package.json fields validation, CLI --help, CLI --version"
 
@@ -123,3 +132,4 @@ knowledge:
     phase_5: "COMPLETE — hierarchy.ts (pure validation/cascade functions: isStatusAfter, validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions), index-manager extended with addChild/removeChild/getChildren, tracker.create() validates parentId, tracker.update() handles downward cascade + upward auto-promotion + reparenting. HIERARCHY_CONSTRAINT error (exit 12). 68 new tests. No CLI changes."
     phase_6: "COMPLETE — dependency-manager.ts (readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore with recursive BFS, detectCycle with DFS), 4 Tracker methods (blockagesAdd with batch cycle detection, blockagesResolve, blockagesDelete, blockagesList), auto-resolution on done/closed transitions, impact score in list sort, CLI blockages subcommand (add/resolve/delete/list). BLOCKAGE_CYCLE error. 58 new tests across dependency-manager.test.ts + additions to tracker.test.ts + commands.test.ts."
     phase_7: "COMPLETE — polish & hardening. (1) JSDoc on all public exports (Tracker + 17 methods, all types, errors, auth). (2) Error message polish — IDs wrapped in backticks, hierarchy messages get period. (3) Edge-case integration tests — 18 new tests (empty tracker, corrupt JSON, missing files, large volume, self-referencing). (4) Package config — prepublishOnly script, package.test.ts (3 tests). 549 tests, 1948 assertions total. All implementation phases done."
+    phase_8: "COMPLETE — build pipeline. (1) tsup v8.5.1 installed as devDependency. (2) tsup.config.ts with two entry points: library (ESM+CJS+dts, commander external) and CLI binary (bundled, node shebang via banner). (3) package.json updated: main→dist/index.cjs, module→dist/index.js, types→dist/index.d.ts, dual exports with types conditions, bin→dist/bin.js, files→dist/, engines→node>=20, added build script. (4) Removed hardcoded shebang from bin.ts (tsup banner handles it). (5) Node.js compat audit: no Bun-specific APIs — codebase uses node:fs/promises. (6) Build produces: dist/index.js (ESM), dist/index.cjs (CJS), dist/index.d.ts, dist/index.d.cts, dist/bin.js + sourcemaps. (7) All quality gates pass: 549 tests, 1950 assertions. (8) Verified: CJS import, ESM import, CLI binary --help/--version all work."

@@ -167,3 +167,44 @@ decisions:
     status: decided
     decided_date: "2026-05-10"
     replaces: "DD-014 originally chose Biome, replaced after recurring friction during Phase 3"
+
+  - id: DD-015
+    title: "tsup for npm build pipeline"
+    choice: "Use tsup to compile TypeScript source to distributable npm package (ESM + CJS + .d.ts + CLI binary)"
+    rationale:
+      - "Purpose-built for TypeScript library builds — single tool for library output + CLI binary"
+      - "Generates dual ESM/CJS automatically — works for both Node.js and Bun consumers"
+      - "Built-in .d.ts generation — type declarations shipped without extra config"
+      - "CLI binary bundled as standalone (includes commander) — zero-dep executable"
+      - "Preserves per-file structure for library output — enables tree-shaking by consumers"
+      - "Built on esbuild — very fast, Bun-friendly toolchain"
+      - "Replaces shipping raw TypeScript source which only worked for Bun consumers"
+    tradeoffs:
+      - "Adds a build step (acceptable — standard for npm packages)"
+      - "Need to verify Node.js compatibility in source (replace Bun.file/Bun.write with node:fs)"
+      - "CLI shebang changes from #!/usr/bin/env bun to #!/usr/bin/env node"
+    alternatives_considered:
+      - "tsc alone — no CJS output, no bundling for CLI, more manual config"
+      - "bun build — bundles to single file (bad for library tree-shaking), no .d.ts"
+      - "Ship raw TS — only works for Bun consumers, excludes most npm users"
+    status: decided
+    decided_date: "2026-05-11"
+
+  - id: DD-016
+    title: "TypeDoc HTML for API documentation"
+    choice: "Use TypeDoc's default HTML output for publishable API docs, keep markdown plugin as secondary output"
+    rationale:
+      - "Already installed and configured — typedoc.json exists, docs:check passes"
+      - "All public exports already have comprehensive JSDoc (Phase 7)"
+      - "Default HTML theme is clean, searchable, and standard for TS libraries"
+      - "Can publish directly to GitHub Pages"
+      - "Keep typedoc-plugin-markdown for embedding in VitePress or other doc sites later"
+    tradeoffs:
+      - "Default theme is functional but not highly styled (acceptable — can upgrade theme later)"
+      - "API docs only — guides/tutorials would need a separate tool (VitePress) in the future"
+    alternatives_considered:
+      - "typedoc-plugin-markdown only — no standalone HTML site, harder to publish"
+      - "VitePress — great for guides but doesn't auto-generate from JSDoc"
+      - "Docusaurus — same limitation, heavier setup"
+    status: decided
+    decided_date: "2026-05-11"

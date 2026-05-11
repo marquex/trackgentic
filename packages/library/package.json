@@ -3,13 +3,23 @@
   "version": "0.1.0",
   "description": "Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
   },
   "bin": {
-    "trackgentic": "./src/bin.ts"
+    "trackgentic": "./dist/bin.js"
   },
   "scripts": {
     "test": "bun test",
@@ -23,13 +33,14 @@
     "docs:generate": "typedoc",
     "docs:check": "typedoc --emit none",
     "quality": "bun run typecheck && bun run lint && bun run test:coverage",
+    "build": "tsup",
     "prepublishOnly": "bun run quality"
   },
   "files": [
-    "src/"
+    "dist/"
   ],
   "engines": {
-    "bun": ">=1.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "commander": "^13.0.0"
@@ -39,9 +50,10 @@
     "@types/bun": "^1.2.0",
     "eslint": "^9.28.0",
     "prettier": "^3.5.3",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.33.0",
+    "tsup": "^8.5.1",
     "typedoc": "^0.28.19",
-    "typedoc-plugin-markdown": "^4.11.0"
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.33.0"
   }
 }

@@ -9,15 +9,17 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 7 complete. All implementation phases done. 549 tests, 1948 assertions, all quality gates pass. Production-ready package."
+expertise_status: "Phase 8 build pipeline complete. tsup compiles to ESM+CJS+dts+CLI binary. 549 tests, 1950 assertions, all gates pass. TypeDoc HTML output and npm publish remain."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Phase 7 complete — all implementation phases done, production-ready
+  stage: Phase 8 build complete. tsup produces dist/ with ESM+CJS+dts+CLI binary. TypeDoc HTML and npm publish remain.
   bun_version: "1.3.11"
+  build_tool: tsup (implemented, producing dist/)
+  docs_tool: TypeDoc HTML output (decided, not yet configured)
 
 detail_files:
   - path: architecture.yaml
@@ -175,3 +177,9 @@ session_log:
   - session: 31
     date: "2026-05-11"
     summary: "Delegated expertise update to library-developer for Phase 7 changes. Discussed next steps with user: (1) commit Phase 7 changes, (2) library-quality validation for Phase 7 (skipped earlier but mandatory workflow says developer→quality), (3) build/npm distribution strategy — current package.json points to raw .ts files which works for Bun but not Node.js, needs build step or Bun-only scoping, (4) resolve open questions OQ-003 (concurrent writes) and OQ-004 (CLAUDE.md), (5) generate API docs via TypeDoc. Recommended order: commit → library-quality review → build strategy decision. Awaiting user direction."
+  - session: 32
+    date: "2026-05-11"
+    summary: "User asked for build and documentation tooling recommendations. Reviewed current project setup (package.json, tsconfig, typedoc.json, source structure). Made two key decisions: (1) Build: tsup — purpose-built for TS→npm library builds, generates ESM + CJS + .d.ts + CLI binary bundle, replaces raw TS source shipping. (2) Docs: TypeDoc HTML — already installed and parsing cleanly with JSDoc on all exports, just switch from typedoc-plugin-markdown to default HTML output for publishable docs. Key prerequisites: verify Node.js compat in file-io.ts (replace Bun.file/Bun.write with node:fs if needed), update shebang from bun to node, update package.json exports. Awaiting user go-ahead to write formal spec and delegate implementation."
+  - session: 33
+    date: "2026-05-11"
+    summary: "User approved. Created Phase 8 build spec (.agentic/specs/09-phase8-build-spec.md). Delegated to library-developer — completed successfully. Key finding: no Bun-specific APIs existed in the codebase (already using node:fs/promises). tsup.config.ts created with dual entry points (library ESM+CJS+dts, CLI binary bundled). package.json updated for dist/-based distribution with node>=20 engine. Delegated to library-quality for validation — all gates pass: 549 tests, 1950 assertions, typecheck clean, lint clean. CJS+ESM imports verified. CLI binary verified end-to-end (init, create, list, view). Build pipeline fully operational."
