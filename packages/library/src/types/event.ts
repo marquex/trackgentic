@@ -1,15 +1,18 @@
 import type { CommentId, IssueId, IssueProperties } from "./issue";
 
 /**
- * Base shape for all events.
+ * Base shape shared by all events.
  */
 export interface BaseEvent {
-  timestamp: string; // ISO 8601
-  author: string; // resolved user name or "system"
+  /** ISO 8601 timestamp. */
+  timestamp: string;
+  /** Resolved user name or "system". */
+  author: string;
 }
 
 /**
- * Creation event — marks the birth of an issue. No content.
+ * Creation event — marks the birth of an issue.
+ * Always the first event in an issue file.
  */
 export interface CreationEvent extends BaseEvent {
   type: "creation";
@@ -17,6 +20,7 @@ export interface CreationEvent extends BaseEvent {
 
 /**
  * Update event — records changes to issue properties.
+ * Includes an optional reason field for system-authored auto-promotion events.
  */
 export interface UpdateEvent extends BaseEvent {
   type: "update";
@@ -26,12 +30,13 @@ export interface UpdateEvent extends BaseEvent {
       "title" | "description" | "status" | "assignee" | "tags" | "priority" | "parentId"
     >
   > & {
-    reason?: string; // for system auto-promotion events
+    /** Optional reason explaining why the update was applied (e.g. auto-promotion). */
+    reason?: string;
   };
 }
 
 /**
- * Comment event — adds a new comment.
+ * Comment event — adds a new comment to an issue.
  */
 export interface CommentEvent extends BaseEvent {
   type: "comment";
@@ -42,7 +47,7 @@ export interface CommentEvent extends BaseEvent {
 }
 
 /**
- * Comment update event — edits an existing comment.
+ * Comment update event — edits an existing comment's content.
  */
 export interface CommentUpdateEvent extends BaseEvent {
   type: "comment-update";
@@ -54,6 +59,7 @@ export interface CommentUpdateEvent extends BaseEvent {
 
 /**
  * Comment delete event — soft-deletes a comment.
+ * Deleted comments are excluded from computed output but remain in the event log.
  */
 export interface CommentDeleteEvent extends BaseEvent {
   type: "comment-delete";
@@ -63,7 +69,7 @@ export interface CommentDeleteEvent extends BaseEvent {
 }
 
 /**
- * Blockage added event — records a new dependency.
+ * Blockage added event — records a new dependency between two issues.
  */
 export interface BlockageAddedEvent extends BaseEvent {
   type: "blockage-added";
@@ -74,6 +80,7 @@ export interface BlockageAddedEvent extends BaseEvent {
 
 /**
  * Blockage resolved event — records dependency resolution.
+ * Includes an optional reason for why the blockage was resolved.
  */
 export interface BlockageResolvedEvent extends BaseEvent {
   type: "blockage-resolved";
@@ -95,6 +102,7 @@ export interface BlockageDeletedEvent extends BaseEvent {
 
 /**
  * Union of all event types.
+ * Each event in an issue file is one of these variants.
  */
 export type Event =
   | CreationEvent

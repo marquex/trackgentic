@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Phase 1-6 complete. 342 tests passing (1283 assertions), 99.83% coverage, typecheck & lint clean."
+expertise_status: "Phase 1-7 complete (all implementation phases done). 549 tests passing (1948 assertions), typecheck & lint clean."
 
 knowledge:
   project_structure:
@@ -16,7 +16,7 @@ knowledge:
     - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users, comments, blockages)"
     - "Tests in tests/ using bun:test (describe/test/expect)"
     - "Test helpers in tests/helpers/ (setup.ts, fixtures.ts, assertions.ts)"
-    - "Test structure mirrors src: tests/core/, tests/cli/ (no tests/integration/ yet — empty dir)"
+    - "Test structure mirrors src: tests/core/, tests/cli/, tests/integration/ (edge-cases.test.ts, package.test.ts)"
     - "dependency-manager.ts — blockage CRUD, impact scoring (getImpactScore with recursive BFS), cycle detection (detectCycle with DFS)"
     - "hierarchy.ts — pure functions for hierarchy validation and status cascade logic"
 
@@ -29,6 +29,7 @@ knowledge:
     - "Formatting: Prettier (semi: true, double quotes, trailing comma: all, printWidth: 100)"
     - "Scripts: lint, lint:fix, format, format:check, docs:generate, docs:check, quality"
     - "Quality script: typecheck + lint + test:coverage in one command"
+    - "prepublishOnly script: 'bun run quality' — runs quality gates before npm publish"
 
   dependencies:
     - "commander ^13.0.0 for CLI argument parsing"
@@ -40,6 +41,8 @@ knowledge:
   architecture:
     - "Tracker class is the single source of truth for all business logic"
     - "CLI is a thin wrapper: parse args -> call Tracker -> print JSON"
+    - "runner.ts exports createProgram() — used by CLI and package integration tests"
+    - "All public exports have comprehensive JSDoc with @param, @returns, @throws, @example tags"
     - "Success -> stdout JSON, exit 0; Error -> stderr JSON, exit from error code"
     - "All file writes use atomic write-to-temp-then-rename pattern (file-io.ts)"
     - "ID generation: Date.now().toString(36).slice(0,6) + Math.random().toString(36).slice(-4) — always 10 chars"
@@ -75,6 +78,7 @@ knowledge:
     - "InitResult is special: ALREADY_INITIALIZED is a valid return (not an error), exit code 0"
     - "UsersRegisterResult, UsersRevokeResult, UsersRegenerateResult use discriminated unions with result field"
     - "TrackgenticError extends Error with result, message, exitCode fields"
+    - "Error messages polish: IDs wrapped in backticks (e.g., `abc123`), hierarchy messages end with period"
     - "ErrorCodes const object maps error names to {result, exitCode} — 13 error codes defined (exit codes 0-12)"
     - "Event union: CreationEvent | UpdateEvent | CommentEvent | CommentUpdateEvent | CommentDeleteEvent | BlockageAddedEvent | BlockageResolvedEvent | BlockageDeletedEvent"
     - "ComputedIssue: id, title, description, status, priority, assignee, parentId, tags, createdAt, createdBy, updatedAt"
@@ -86,9 +90,10 @@ knowledge:
     - "Tests use createTestDir() from tests/helpers/setup.ts for isolation with cleanup"
     - "CLI tests use Bun.spawn to run bin.ts as subprocess, check stdout/stderr/exitCode"
     - "ID tests verify length (10), format (base36), and uniqueness (100 samples)"
-    - "342 tests across 10 files: auth, events, file-io, id, index-manager, resolution, tracker, hierarchy, dependency-manager, CLI commands"
-    - "99.83% line coverage, 99.38% branch coverage"
-    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker,hierarchy,dependency-manager}.test.ts + tests/cli/commands.test.ts"
+    - "549 tests across 12 files: auth, events, file-io, id, index-manager, resolution, tracker, hierarchy, dependency-manager, CLI commands, integration/edge-cases, integration/package"
+    - "Test files: tests/core/{auth,events,file-io,id,index-manager,resolution,tracker,hierarchy,dependency-manager}.test.ts + tests/cli/commands.test.ts + tests/integration/{edge-cases,package}.test.ts"
+    - "Integration edge-case tests: empty tracker ops, invalid JSON corruption, missing file during ops, large event volume (100+ updates, 50+ comments), self-referencing/no-op"
+    - "Package tests: package.json fields validation, CLI --help, CLI --version"
 
   cli_commands:
     - "init — no args, creates .trackgentic/ dir"
@@ -117,4 +122,4 @@ knowledge:
     phase_4: "COMPLETE — computeComments() in events.ts (replay comment events into ComputedComment[]), 4 Tracker methods (commentsAdd, commentsUpdate, commentsDelete, commentsList), CLI comments subcommand (src/cli/commands/comments.ts), comments registered in runner.ts. 26 new tests (8 events + 14 tracker + 4 CLI)."
     phase_5: "COMPLETE — hierarchy.ts (pure validation/cascade functions: isStatusAfter, validateNewChild, validateParentStatusChange, getClosableChildren, computeUpwardPromotions), index-manager extended with addChild/removeChild/getChildren, tracker.create() validates parentId, tracker.update() handles downward cascade + upward auto-promotion + reparenting. HIERARCHY_CONSTRAINT error (exit 12). 68 new tests. No CLI changes."
     phase_6: "COMPLETE — dependency-manager.ts (readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore with recursive BFS, detectCycle with DFS), 4 Tracker methods (blockagesAdd with batch cycle detection, blockagesResolve, blockagesDelete, blockagesList), auto-resolution on done/closed transitions, impact score in list sort, CLI blockages subcommand (add/resolve/delete/list). BLOCKAGE_CYCLE error. 58 new tests across dependency-manager.test.ts + additions to tracker.test.ts + commands.test.ts."
-    phase_7: "NOT STARTED — polish & hardening"
+    phase_7: "COMPLETE — polish & hardening. (1) JSDoc on all public exports (Tracker + 17 methods, all types, errors, auth). (2) Error message polish — IDs wrapped in backticks, hierarchy messages get period. (3) Edge-case integration tests — 18 new tests (empty tracker, corrupt JSON, missing files, large volume, self-referencing). (4) Package config — prepublishOnly script, package.test.ts (3 tests). 549 tests, 1948 assertions total. All implementation phases done."

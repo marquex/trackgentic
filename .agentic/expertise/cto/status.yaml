@@ -2,8 +2,8 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: Phase 6 complete — ready for Phase 7 (polish & hardening)
-  source_code: Phase 1+2+3+4+5+6 implemented (event engine, CRUD, auth, comments, hierarchy, blockages with cycle detection + auto-resolution)
+  phase: Phase 7 complete — all implementation phases done
+  source_code: All 7 phases implemented (event engine, CRUD, auth, comments, hierarchy, blockages, polish & hardening)
   monorepo_files:
     - package.json (root workspace config)
     - packages/library/package.json (11 scripts, eslint + prettier + typedoc + typescript + @types/bun)
@@ -22,7 +22,7 @@ current_state:
     linting: ESLint ^9.28 + typescript-eslint ^8.33 (replaced Biome), zero errors
     formatting: Prettier ^3.5.3 (replaced Biome formatter), zero issues
     typechecking: TypeScript strict + 4 extra flags, zero errors
-    testing: Bun test runner with coverage, 528 tests, 1793 assertions
+    testing: Bun test runner with coverage, 549 tests, 1948 assertions
     documentation: TypeDoc parses cleanly
     status: fully implemented — all quality gates passing
     test_helpers: setup.ts, fixtures.ts, assertions.ts created in tests/helpers/
@@ -161,6 +161,8 @@ current_state:
     spec: .agentic/specs/07-phase6-blockages-spec.md
   last_updated: "2026-05-11"
   phase_6_complete_date: "2026-05-10"
+  phase_7_start_date: "2026-05-11"
+  phase_7_complete_date: "2026-05-11"
   blockers: []
 
 implementation_roadmap:
@@ -197,6 +199,27 @@ implementation_roadmap:
     phase_7_polish:
       description: "Edge case testing, package config, error messages, JSDoc"
       exit_criteria: "Package installs and CLI works from any directory, all tests pass"
+      status: complete
+      notes: "All 4 tasks done. JSDoc on all public exports. Error messages polished (backtick IDs, consistent format). 21 new tests (18 edge cases + 3 package config). prepublishOnly script added. 549 total tests, 1948 assertions."
+  phase_7_results:
+    tests: 549 passing, 1948 assertions
+    typecheck: clean (strict + 4 extra flags)
+    lint: clean (ESLint, zero errors)
+    format: clean (Prettier, zero issues)
+    docs_check: clean (TypeDoc parses all source)
+    new_files:
+      tests: tests/integration/edge-cases.test.ts (18 tests), tests/integration/package.test.ts (3 tests)
+    modified_files:
+      core: tracker.ts (JSDoc on class + all 17 methods, error messages with backtick IDs), hierarchy.ts (error messages polished), errors.ts (JSDoc)
+      types: issue.ts, event.ts, index-file.ts, dependency.ts, user.ts, config.ts, api.ts (all JSDoc)
+      tests: hierarchy.test.ts, tracker.test.ts, tracker-hierarchy.test.ts (error message assertion updates)
+      config: package.json (added prepublishOnly script)
+    design_decisions:
+      - Error messages consistently wrap IDs in backticks for readability
+      - Error messages always end with period
+      - JSDoc uses @param, @returns, @throws, @example tags
+      - Edge case tests document concurrent write limitation as a known constraint
+      - CLI --version returns package.json version (0.1.0)
 
 open_questions:
   - id: OQ-001

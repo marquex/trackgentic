@@ -20,7 +20,7 @@ export function isStatusAfter(childStatus: IssueStatus, parentStatus: IssueStatu
 export function validateNewChild(parentEntry: IndexEntry | null): string | null {
   if (!parentEntry) return null; // No parent — no constraint
   if (parentEntry.status === "closed") {
-    return "Cannot add child to closed parent";
+    return "Cannot add child to closed parent.";
   }
   return null;
 }
@@ -40,7 +40,7 @@ export function validateParentStatusChange(
 
   for (const child of childEntries) {
     if (!isStatusAfter(child.status, "done") && child.status !== "done") {
-      return `Cannot set parent to ${targetStatus}: child ${child.id} has status '${child.status}'`;
+      return `Cannot set parent to \`${targetStatus}\`: child \`${child.id}\` has status '${child.status}'.`;
     }
   }
 

@@ -1,16 +1,16 @@
 /**
- * Issue ID — 10 chars: 6 from timestamp base36 + 4 random base36
+ * Issue ID — 10-char string: 6 from timestamp base36 + 4 random base36.
  * Sortable by creation time.
  */
 export type IssueId = string;
 
 /**
- * Comment ID — same format as IssueId: 10-char base36
+ * Comment ID — same format as IssueId: 10-char base36 string.
  */
 export type CommentId = string;
 
 /**
- * Issue status progression: idea → todo → in-progress → done → closed
+ * Issue status progression: idea → todo → in-progress → done → closed.
  */
 export type IssueStatus = "idea" | "todo" | "in-progress" | "done" | "closed";
 
@@ -29,21 +29,28 @@ export interface IssueProperties {
 }
 
 /**
- * Full computed state of an issue, including computed fields.
+ * Full computed state of an issue, including timestamps.
+ * Produced by replaying all events for an issue.
  */
 export interface ComputedIssue extends IssueProperties {
-  createdAt: string; // ISO 8601 — timestamp of creation event
-  createdBy: string; // author of creation event
-  updatedAt: string; // ISO 8601 — timestamp of last event
+  /** ISO 8601 — timestamp of the creation event. */
+  createdAt: string;
+  /** Author of the creation event. */
+  createdBy: string;
+  /** ISO 8601 — timestamp of the last event. */
+  updatedAt: string;
 }
 
 /**
- * Computed state of a comment.
+ * Computed state of a single comment.
+ * Produced by replaying comment, comment-update, and comment-delete events.
  */
 export interface ComputedComment {
   id: CommentId;
   author: string;
   content: string;
-  timestamp: string; // ISO 8601 — when the comment was created
-  editedAt: string | null; // ISO 8601 — when last comment-update was applied, or null
+  /** ISO 8601 — when the comment was created. */
+  timestamp: string;
+  /** ISO 8601 — when the last comment-update was applied, or null if never edited. */
+  editedAt: string | null;
 }

@@ -1,12 +1,14 @@
 import type { IssueId, IssueStatus } from "./issue";
 
 /**
- * A single entry in the index file — summary of an issue for fast lookup.
+ * Summary of an issue for fast index lookup.
+ * Stored in the sorted index file alongside other entries.
  */
 export interface IndexEntry {
   id: IssueId;
   title: string;
-  path: string; // relative path to issue file
+  /** Relative path to the issue file from the tracker directory. */
+  path: string;
   status: IssueStatus;
   assignee: string | null;
   parentId: IssueId | null;
@@ -24,7 +26,10 @@ export interface IndexEntry {
  * - `childrenOf` keys only exist for issues that have children.
  */
 export interface IndexFile {
+  /** Issues that are not closed. */
   open: IndexEntry[];
+  /** Issues that are closed. */
   closed: IndexEntry[];
+  /** Maps parent ID to array of child IDs. */
   childrenOf: Record<IssueId, IssueId[]>;
 }

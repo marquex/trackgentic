@@ -91,7 +91,7 @@ describe("Hierarchy", () => {
 
     test("closed parent returns error", () => {
       const entry = makeEntry({ status: "closed" });
-      expect(validateNewChild(entry)).toBe("Cannot add child to closed parent");
+      expect(validateNewChild(entry)).toBe("Cannot add child to closed parent.");
     });
 
     test("idea parent returns null", () => {
@@ -150,7 +150,9 @@ describe("Hierarchy", () => {
       const child = makeEntry({ id: "child000001", status: "in-progress" });
       const index = makeIndex([child]);
       const result = validateParentStatusChange(index, [child], "done");
-      expect(result).toBe("Cannot set parent to done: child child000001 has status 'in-progress'");
+      expect(result).toBe(
+        "Cannot set parent to `done`: child `child000001` has status 'in-progress'.",
+      );
     });
 
     test("one child in-progress blocks closed", () => {
@@ -158,7 +160,7 @@ describe("Hierarchy", () => {
       const index = makeIndex([child]);
       const result = validateParentStatusChange(index, [child], "closed");
       expect(result).toBe(
-        "Cannot set parent to closed: child child000001 has status 'in-progress'",
+        "Cannot set parent to `closed`: child `child000001` has status 'in-progress'.",
       );
     });
 
@@ -167,14 +169,14 @@ describe("Hierarchy", () => {
       const child2 = makeEntry({ id: "child000002", status: "idea" });
       const index = makeIndex([child1, child2]);
       const result = validateParentStatusChange(index, [child1, child2], "done");
-      expect(result).toBe("Cannot set parent to done: child child000002 has status 'idea'");
+      expect(result).toBe("Cannot set parent to `done`: child `child000002` has status 'idea'.");
     });
 
     test("one child todo blocks closed", () => {
       const child = makeEntry({ id: "child000001", status: "todo" });
       const index = makeIndex([child]);
       const result = validateParentStatusChange(index, [child], "closed");
-      expect(result).toBe("Cannot set parent to closed: child child000001 has status 'todo'");
+      expect(result).toBe("Cannot set parent to `closed`: child `child000001` has status 'todo'.");
     });
   });
 

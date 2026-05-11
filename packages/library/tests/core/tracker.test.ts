@@ -1824,7 +1824,7 @@ describe("Tracker", () => {
         expect(err).toBeInstanceOf(TrackgenticError);
         const e = err as TrackgenticError;
         expect(e.result).toBe("NOT_FOUND");
-        expect(e.message).toBe("Parent issue not found");
+        expect(e.message).toBe("Parent issue `missing12345` not found in index.");
         expect(e.exitCode).toBe(5);
       }
     });

@@ -14,10 +14,7 @@ export async function readDependencies(trackerDir: string): Promise<Dependencies
 /**
  * Write dependencies.json atomically.
  */
-export async function writeDependencies(
-  trackerDir: string,
-  deps: DependenciesFile,
-): Promise<void> {
+export async function writeDependencies(trackerDir: string, deps: DependenciesFile): Promise<void> {
   await atomicWriteJSON(join(trackerDir, DEPS_FILE), deps);
 }
 

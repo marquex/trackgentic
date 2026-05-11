@@ -5,7 +5,14 @@ import { ErrorCodes, TrackgenticError } from "./errors";
  * Resolve the author for an operation based on auth configuration.
  *
  * Synchronous — only does in-memory lookups.
- * Reads TRACKGENTIC_USER_TOKEN from env if no explicit token is provided.
+ * Reads `TRACKGENTIC_USER_TOKEN` from env if no explicit token is provided.
+ *
+ * @param options - Auth resolution options
+ * @param options.token - Explicit token to validate (overrides env var)
+ * @param options.config - The current config file contents
+ * @param options.users - The current users file contents
+ * @param options.requiresWrite - Whether the operation requires write permissions
+ * @returns `{ author }` on success, or a TrackgenticError on auth failure
  */
 export function resolveAuthor(options: {
   token?: string;

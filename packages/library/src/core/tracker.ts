@@ -165,18 +165,46 @@ async function cascadeClose(
 /**
  * Tracker — the main programmatic API for trackgentic.
  *
- * The constructor accepts a `cwd` parameter (defaults to `process.cwd()`).
- * It does NOT validate that `.trackgentic/` exists — resolution happens on each method call.
+ * Provides methods for issue CRUD, comments, blockages, user management,
+ * and event history. The constructor accepts a `cwd` parameter that defaults
+ * to `process.cwd()`. It does NOT validate that `.trackgentic/` exists at
+ * construction time — resolution happens on each method call.
+ *
+ * @example
+ * ```typescript
+ * import { Tracker } from "trackgentic";
+ *
+ * const tracker = new Tracker("/path/to/project");
+ * await tracker.init();
+ * const { id } = await tracker.create({ title: "My first issue" });
+ * ```
  */
 export class Tracker {
   private cwd: string;
 
+  /**
+   * Create a new Tracker instance.
+   *
+   * @param cwd - Working directory to resolve `.trackgentic/` from. Defaults to `process.cwd()`.
+   */
   constructor(cwd?: string) {
     this.cwd = cwd ?? process.cwd();
   }
 
   /**
    * Initialize a new `.trackgentic/` directory in `cwd`.
+   *
+   * Creates the directory structure with all initial files:
+   * `config.json`, `index.json`, `dependencies.json`, `users.json`,
+   * and an empty `issues/` subdirectory.
+   *
+   * @returns `{ result: "OK", path }` on success, or `{ result: "ALREADY_INITIALIZED", path }` if already exists
+   *
+   * @example
+   * ```typescript
+   * const result = await tracker.init();
+   * if (result.result === "OK") console.log("Created at", result.path);
+   * ```
    */
   async init(): Promise<InitResult> {
     const trackerDir = join(this.cwd, TRACKGENTIC_DIR);
@@ -198,6 +226,33 @@ export class Tracker {
 
   /**
    * Create a new issue.
+   *
+   * Generates a unique ID, creates the issue file with creation + update events,
+   * and inserts an entry into the sorted index. Validates parent constraints if
+   * `parentId` is provided.
+   *
+   * @param params - Creation parameters
+   * @param params.title - The issue title (required)
+   * @param params.description - Optional description, defaults to ""
+   * @param params.status - Initial status, defaults to "idea"
+   * @param params.priority - Priority 1-5, defaults to 3
+   * @param params.assignee - Optional assignee, defaults to null
+   * @param params.tags - Optional tags, defaults to []
+   * @param params.parentId - Optional parent issue ID for hierarchy
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ id }` on success, or a TrackgenticError on auth failure
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if parentId doesn't exist in index
+   * @throws {TrackgenticError} HIERARCHY_CONSTRAINT if parent is closed
+   *
+   * @example
+   * ```typescript
+   * const { id } = await tracker.create({
+   *   title: "Bug fix",
+   *   priority: 1,
+   *   tags: ["bug", "urgent"],
+   * });
+   * ```
    */
   async create(params: CreateParams): Promise<CreateResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -236,7 +291,7 @@ export class Tracker {
       if (!parentEntry) {
         throw new TrackgenticError(
           ErrorCodes.NOT_FOUND.result,
-          "Parent issue not found",
+          `Parent issue \`${parentId}\` not found in index.`,
           ErrorCodes.NOT_FOUND.exitCode,
         );
       }
@@ -295,7 +350,28 @@ export class Tracker {
   }
 
   /**
-   * List issues from the index, with optional filters.
+   * List issues from the index with optional filters.
+   *
+   * Returns entries sorted by: priority ASC → impact score DESC → id ASC.
+   * Impact score is the count of active issues this issue blocks.
+   *
+   * @param params - Optional filter parameters
+   * @param params.status - Filter by status; "open" = all non-closed, "closed" = closed only
+   * @param params.assignee - Filter by assignee name
+   * @param params.tags - AND filter — issue must have ALL specified tags
+   * @param params.parentId - Filter by parent ID; null = top-level issues only
+   * @returns Array of index entries matching the filters
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} TOKEN_REQUIRED if auth mode is strict and no token provided
+   *
+   * @example
+   * ```typescript
+   * const openUrgent = await tracker.list({
+   *   status: "open",
+   *   tags: ["urgent"],
+   *   parentId: null,
+   * });
+   * ```
    */
   async list(params?: ListParams): Promise<ListResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -372,6 +448,21 @@ export class Tracker {
 
   /**
    * View a single issue's full computed state.
+   *
+   * Replays all events from the issue file to produce the current computed state,
+   * including all property values and timestamps.
+   *
+   * @param id - The issue ID to look up
+   * @returns The full computed issue state, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   *
+   * @example
+   * ```typescript
+   * const issue = await tracker.view("abc123def4");
+   * if ("title" in issue) console.log(issue.title, issue.status);
+   * ```
    */
   async view(id: IssueId): Promise<ViewResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -395,7 +486,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -404,7 +495,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -415,6 +506,33 @@ export class Tracker {
 
   /**
    * Update an existing issue.
+   *
+   * Appends an update event to the issue file, recomputes state, and updates the index.
+   * Handles hierarchy side effects: downward cascade (auto-close done children when parent
+   * closes), upward promotion (promote parent when child advances past it), and reparenting
+   * validation. Also auto-resolves active blockages when the issue transitions to done/closed.
+   *
+   * @param id - The issue ID to update
+   * @param params - Update parameters (at least one field required besides author)
+   * @param params.title - New title
+   * @param params.description - New description
+   * @param params.status - New status
+   * @param params.assignee - New assignee, or null to clear
+   * @param params.tags - New tags (replaces existing)
+   * @param params.priority - New priority (1-5)
+   * @param params.parentId - New parent ID, or null to detach
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK" }` on success, or a TrackgenticError on auth failure
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} INVALID_PARAMS if no fields provided besides author
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   * @throws {TrackgenticError} HIERARCHY_CONSTRAINT if status change violates parent/child rules
+   *
+   * @example
+   * ```typescript
+   * await tracker.update("abc123def4", { status: "in-progress", priority: 2 });
+   * ```
    */
   async update(id: IssueId, params: UpdateParams): Promise<UpdateResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -455,7 +573,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -464,7 +582,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -500,7 +618,7 @@ export class Tracker {
         if (!newParentEntry) {
           throw new TrackgenticError(
             ErrorCodes.NOT_FOUND.result,
-            "Parent issue not found",
+            `Parent issue \`${params.parentId}\` not found in index.`,
             ErrorCodes.NOT_FOUND.exitCode,
           );
         }
@@ -661,6 +779,23 @@ export class Tracker {
 
   /**
    * Get the raw event history for an issue.
+   *
+   * Returns the complete array of events stored in the issue file,
+   * in chronological order from creation to latest.
+   *
+   * @param id - The issue ID to look up
+   * @returns Array of events, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   *
+   * @example
+   * ```typescript
+   * const events = await tracker.history("abc123def4");
+   * if (Array.isArray(events)) {
+   *   for (const event of events) console.log(event.type, event.timestamp);
+   * }
+   * ```
    */
   async history(id: IssueId): Promise<HistoryResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -684,7 +819,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -693,7 +828,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -705,6 +840,24 @@ export class Tracker {
 
   /**
    * Add a comment to an issue.
+   *
+   * Appends a comment event to the issue file with a newly generated comment ID.
+   *
+   * @param id - The issue ID to comment on
+   * @param params - Comment parameters
+   * @param params.content - The comment content
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK", commentId }` on success, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   *
+   * @example
+   * ```typescript
+   * const { commentId } = await tracker.commentsAdd("abc123def4", {
+   *   content: "This looks like a duplicate.",
+   * });
+   * ```
    */
   async commentsAdd(id: IssueId, params: CommentAddParams): Promise<CommentAddResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -727,7 +880,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -736,7 +889,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -758,6 +911,20 @@ export class Tracker {
 
   /**
    * Update an existing comment.
+   *
+   * Validates that the comment exists (not soft-deleted), then appends
+   * a comment-update event to the issue file.
+   *
+   * @param id - The issue ID containing the comment
+   * @param commentId - The comment ID to update
+   * @param params - Update parameters
+   * @param params.content - The new comment content
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK" }` on success, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   * @throws {TrackgenticError} COMMENT_NOT_FOUND if comment ID is not found
    */
   async commentsUpdate(
     id: IssueId,
@@ -784,7 +951,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -793,7 +960,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -803,7 +970,7 @@ export class Tracker {
     if (!comments.find((c) => c.id === commentId)) {
       throw new TrackgenticError(
         ErrorCodes.COMMENT_NOT_FOUND.result,
-        `Comment ${commentId} not found.`,
+        `Comment \`${commentId}\` not found.`,
         ErrorCodes.COMMENT_NOT_FOUND.exitCode,
       );
     }
@@ -823,7 +990,21 @@ export class Tracker {
   }
 
   /**
-   * Delete a comment from an issue.
+   * Delete a comment from an issue (soft-delete).
+   *
+   * Validates that the comment exists and is not already deleted, then appends
+   * a comment-delete event. Deleted comments are excluded from computed output
+   * but remain in the event log for audit purposes.
+   *
+   * @param id - The issue ID containing the comment
+   * @param commentId - The comment ID to delete
+   * @param params - Optional parameters
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK" }` on success, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   * @throws {TrackgenticError} COMMENT_NOT_FOUND if comment ID is not found or already deleted
    */
   async commentsDelete(
     id: IssueId,
@@ -850,7 +1031,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -859,7 +1040,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -869,7 +1050,7 @@ export class Tracker {
     if (!comments.find((c) => c.id === commentId)) {
       throw new TrackgenticError(
         ErrorCodes.COMMENT_NOT_FOUND.result,
-        `Comment ${commentId} not found.`,
+        `Comment \`${commentId}\` not found.`,
         ErrorCodes.COMMENT_NOT_FOUND.exitCode,
       );
     }
@@ -889,7 +1070,24 @@ export class Tracker {
   }
 
   /**
-   * List all comments for an issue.
+   * List all non-deleted comments for an issue.
+   *
+   * Replays all comment-related events to produce the current computed
+   * comment list, excluding soft-deleted comments.
+   *
+   * @param id - The issue ID to list comments for
+   * @returns Array of computed comments, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   * @throws {TrackgenticError} ISSUE_MISSING if index entry exists but file is missing
+   *
+   * @example
+   * ```typescript
+   * const comments = await tracker.commentsList("abc123def4");
+   * if (Array.isArray(comments)) {
+   *   for (const c of comments) console.log(c.author, c.content);
+   * }
+   * ```
    */
   async commentsList(id: IssueId): Promise<CommentsListResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -913,7 +1111,7 @@ export class Tracker {
     if (!entry) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -922,7 +1120,7 @@ export class Tracker {
     if (!existsSync(issueFilePath)) {
       throw new TrackgenticError(
         ErrorCodes.ISSUE_MISSING.result,
-        `Issue file for ${id} is missing.`,
+        `Issue file for \`${id}\` is missing.`,
         ErrorCodes.ISSUE_MISSING.exitCode,
       );
     }
@@ -935,7 +1133,26 @@ export class Tracker {
 
   /**
    * Add blockage dependencies to an issue.
-   * Batch atomic: if any blocker would create a cycle, the entire batch is rejected.
+   *
+   * Batch atomic: if adding any blocker would create a cycle, the entire batch
+   * is rejected and no changes are written. Validates that both the blocked issue
+   * and all blocker issues exist in the index.
+   *
+   * @param blockedId - The issue that is blocked
+   * @param params - Blockage parameters
+   * @param params.blockerIds - Array of blocker issue IDs
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK" }` on success, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if blockedId or any blockerId is not in the index
+   * @throws {TrackgenticError} BLOCKAGE_CYCLE if adding the blockage would create a cycle
+   *
+   * @example
+   * ```typescript
+   * await tracker.blockagesAdd("blocked001", {
+   *   blockerIds: ["blocker001", "blocker002"],
+   * });
+   * ```
    */
   async blockagesAdd(blockedId: IssueId, params: BlockagesAddParams): Promise<BlockagesAddResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -959,7 +1176,7 @@ export class Tracker {
     if (!findEntry(index, blockedId)) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${blockedId} not found in index.`,
+        `Issue \`${blockedId}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -969,7 +1186,7 @@ export class Tracker {
       if (!findEntry(index, blockerId)) {
         throw new TrackgenticError(
           ErrorCodes.NOT_FOUND.result,
-          `Issue ${blockerId} not found in index.`,
+          `Issue \`${blockerId}\` not found in index.`,
           ErrorCodes.NOT_FOUND.exitCode,
         );
       }
@@ -988,7 +1205,7 @@ export class Tracker {
       if (detectCycle(projected, blockedId, blockerId)) {
         throw new TrackgenticError(
           ErrorCodes.BLOCKAGE_CYCLE.result,
-          `Blockage would create a cycle: ${blockedId} → ... → ${blockerId}`,
+          `Blockage would create a cycle: \`${blockedId}\` → ... → \`${blockerId}\`.`,
           ErrorCodes.BLOCKAGE_CYCLE.exitCode,
         );
       }
@@ -1017,6 +1234,22 @@ export class Tracker {
 
   /**
    * Resolve blockage dependencies for an issue.
+   *
+   * Marks the specified blockages as "resolved" in the dependencies file
+   * and appends blockage-resolved events to the blocked issue's file.
+   *
+   * @param blockedId - The issue that was blocked
+   * @param params - Resolve parameters
+   * @param params.blockerIds - Array of blocker issue IDs to resolve
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK" }` on success, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if blockedId is not in the index
+   *
+   * @example
+   * ```typescript
+   * await tracker.blockagesResolve("blocked001", { blockerIds: ["blocker001"] });
+   * ```
    */
   async blockagesResolve(
     blockedId: IssueId,
@@ -1042,7 +1275,7 @@ export class Tracker {
     if (!findEntry(index, blockedId)) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${blockedId} not found in index.`,
+        `Issue \`${blockedId}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -1075,6 +1308,23 @@ export class Tracker {
 
   /**
    * Delete blockage dependencies for an issue.
+   *
+   * Removes the specified blockage entries entirely from the dependencies file
+   * (not a soft-delete — entries are removed) and appends blockage-deleted events
+   * to the blocked issue's file.
+   *
+   * @param blockedId - The issue that was blocked
+   * @param params - Delete parameters
+   * @param params.blockerIds - Array of blocker issue IDs to delete
+   * @param params.author - Override author (resolved by auth layer if not provided)
+   * @returns `{ result: "OK" }` on success, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if blockedId is not in the index
+   *
+   * @example
+   * ```typescript
+   * await tracker.blockagesDelete("blocked001", { blockerIds: ["blocker001"] });
+   * ```
    */
   async blockagesDelete(
     blockedId: IssueId,
@@ -1100,7 +1350,7 @@ export class Tracker {
     if (!findEntry(index, blockedId)) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${blockedId} not found in index.`,
+        `Issue \`${blockedId}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -1133,6 +1383,23 @@ export class Tracker {
 
   /**
    * List all blockage info for an issue.
+   *
+   * Returns both directions: what blocks this issue (`blockedBy`) and
+   * what this issue blocks (`blocks`).
+   *
+   * @param id - The issue ID to look up blockages for
+   * @returns Blockage info with `blockedBy` and `blocks` arrays, or a TrackgenticError
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} NOT_FOUND if issue ID is not in the index
+   *
+   * @example
+   * ```typescript
+   * const info = await tracker.blockagesList("abc123def4");
+   * if ("issueId" in info)) {
+   *   console.log("Blocked by:", info.blockedBy.length);
+   *   console.log("Blocks:", info.blocks.length);
+   * }
+   * ```
    */
   async blockagesList(id: IssueId): Promise<BlockagesListResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -1156,7 +1423,7 @@ export class Tracker {
     if (!findEntry(index, id)) {
       throw new TrackgenticError(
         ErrorCodes.NOT_FOUND.result,
-        `Issue ${id} not found in index.`,
+        `Issue \`${id}\` not found in index.`,
         ErrorCodes.NOT_FOUND.exitCode,
       );
     }
@@ -1173,7 +1440,21 @@ export class Tracker {
   // ─── User Management ──────────────────────────────────────────────
 
   /**
-   * Register a new user. Does NOT require auth (bootstrap mechanism).
+   * Register a new user.
+   *
+   * Bootstrap mechanism — does NOT require authentication.
+   * Generates a unique token (`tk_` + 8 random alphanumeric chars) for the user.
+   * Names are stored lowercase. The name "anonymous" is reserved.
+   *
+   * @param name - The user name to register (stored lowercase)
+   * @returns `{ result: "OK", name, token }` on success, or `{ result: "USER_ALREADY_EXISTS", message }`
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   *
+   * @example
+   * ```typescript
+   * const result = await tracker.usersRegister("Alice");
+   * if ("token" in result) console.log("Token:", result.token);
+   * ```
    */
   async usersRegister(name: string): Promise<UsersRegisterResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -1219,8 +1500,20 @@ export class Tracker {
   }
 
   /**
-   * List all registered users (tokens stripped).
-   * Auth: depends on mode (read operation).
+   * List all registered users with tokens stripped.
+   *
+   * Returns public user info (name and registration date) without exposing tokens.
+   * Auth requirements depend on the configured mode (read operation).
+   *
+   * @returns Array of user info objects (no tokens)
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} TOKEN_REQUIRED if auth mode is strict and no token provided
+   *
+   * @example
+   * ```typescript
+   * const users = await tracker.usersList();
+   * for (const u of users) console.log(u.name, u.registeredAt);
+   * ```
    */
   async usersList(): Promise<UsersListResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -1246,7 +1539,21 @@ export class Tracker {
   }
 
   /**
-   * Revoke (remove) a user. Requires auth (write operation).
+   * Revoke (remove) a user from the system.
+   *
+   * Removes the user and their token from the users file.
+   * Requires authentication (write operation).
+   *
+   * @param name - The user name to revoke (case-insensitive)
+   * @returns `{ result: "OK" }` on success, or `{ result: "USER_NOT_FOUND", message }`
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} TOKEN_REQUIRED if no token provided in auth-required mode
+   *
+   * @example
+   * ```typescript
+   * const result = await tracker.usersRevoke("alice");
+   * if (result.result === "OK") console.log("User revoked.");
+   * ```
    */
   async usersRevoke(name: string): Promise<UsersRevokeResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -1281,8 +1588,21 @@ export class Tracker {
   }
 
   /**
-   * Regenerate a user's token. Self-service only — caller must be the target user.
-   * Requires auth (write operation).
+   * Regenerate a user's authentication token.
+   *
+   * Self-service only — the authenticated caller must be the target user.
+   * Generates a new token and replaces the old one in the users file.
+   *
+   * @param name - The user name whose token to regenerate (case-insensitive)
+   * @returns `{ result: "OK", name, token }` with the new token, or an error result
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} TOKEN_REQUIRED if no token provided
+   *
+   * @example
+   * ```typescript
+   * const result = await tracker.usersRegenerate("alice");
+   * if ("token" in result) console.log("New token:", result.token);
+   * ```
    */
   async usersRegenerate(name: string): Promise<UsersRegenerateResult> {
     const trackerDir = resolveTrackerDir(this.cwd);
@@ -1308,7 +1628,7 @@ export class Tracker {
     if (callerName !== lowerName) {
       return {
         result: "INVALID_TOKEN",
-        message: `You can only regenerate your own token.`,
+        message: "You can only regenerate your own token.",
       };
     }
 

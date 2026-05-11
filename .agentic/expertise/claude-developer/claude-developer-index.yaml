@@ -141,6 +141,8 @@ gotchas:
   - Expertise injection was only handled on UserPromptSubmit, not SessionStart — delegated subagents via delegate skill (claude -p) need SessionStart injection since that's the primary context injection point before the first prompt
   - Expertise hooks (SessionStart, UserPromptSubmit, Stop) live in agent frontmatter, NOT settings.json — settings.json hooks don't reliably fire for -p mode delegates
   - hire-expert skill template includes all three expertise hooks in the frontmatter — new agents get them automatically
+  - "TYPOS IN HOOK COMMANDS ARE SILENTLY FATAL — if a hook command references a non-existent file, bun fails with a non-zero exit code, producing a 'hook error' notification. The hook never executes. Since there's no compile-time checking on command strings, always double-check paths after editing agent frontmatter hook commands."
+  - "stop-hook-error notification appears in --verbose stream-json output for ALL agents when their Stop hook returns decision: block — this is normal Claude Code behavior, not a bug. The hook works correctly (feedback is passed, agent continues), but the notification is always emitted."
 
 open_questions: []
 
@@ -151,3 +153,4 @@ resolved:
   - "RESOLVED: Bash timeout configurable via env vars — BASH_DEFAULT_TIMEOUT_MS (default 2 min) and BASH_MAX_TIMEOUT_MS (default 10 min, the ceiling). Can be set via the `env` key in settings.json to apply to all sessions, or in shell profile before Claude Code starts. Project currently uses BASH_DEFAULT_TIMEOUT_MS=600000 (10 min) and BASH_MAX_TIMEOUT_MS=1800000 (30 min)."
   - "FIXED: Expertise injection for delegated subagents — expertise.hook.ts now handles SessionStart event (primary injection point). Uses flag-based de-duplication: SessionStart writes flag + injects; UserPromptSubmit checks flag and skips if already injected. This ensures expertise is available from session start in both interactive and -p (delegated) modes."
   - "FIXED: Stop hook not reliably firing for delegated agents — all expertise hooks (SessionStart, UserPromptSubmit, Stop) moved from settings.json to agent frontmatter. hire-expert template updated so new agents get hooks automatically."
+  - "FIXED: library-quality agent Stop hook had typo in command path — expertence.hook.ts (missing 'i') → expertise.hook.ts. This caused the Stop hook to fail silently (bun couldn't find the file), so the agent never received expertise update reminders."

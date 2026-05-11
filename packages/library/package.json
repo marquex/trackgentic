@@ -22,7 +22,8 @@
     "format:check": "prettier --check src/ tests/",
     "docs:generate": "typedoc",
     "docs:check": "typedoc --emit none",
-    "quality": "bun run typecheck && bun run lint && bun run test:coverage"
+    "quality": "bun run typecheck && bun run lint && bun run test:coverage",
+    "prepublishOnly": "bun run quality"
   },
   "files": [
     "src/"
