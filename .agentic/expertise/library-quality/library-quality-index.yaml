@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — Phases 1-6 complete. 342 tests, 1283 assertions, 99.38% line coverage. Prettier + ESLint tooling."
+expertise_status: "Active — Phases 1-6 complete. 528 tests, 1793 assertions, 99.38% line coverage. Prettier + ESLint tooling. Tests refactored into focused per-feature files."
 
 project_phases:
   phase_1_foundation:
@@ -43,17 +43,81 @@ source_layout:
   public_api: "src/index.ts (62 lines) re-exports Tracker class, TrackgenticError, all type and response type aliases"
 
 test_layout:
-  total_tests: 342
-  total_expect_calls: 1283
-  total_lines: 5686
+  total_tests: 528
+  total_expect_calls: 1793
+  total_files: 22
   test_helpers: [helpers/setup.ts (19 lines — createTestDir, cleanupTestDir), helpers/fixtures.ts (24 lines — createIssueParams, updateIssueParams), helpers/assertions.ts (18 lines — expectError, expectOk)]
-  files:
-    core_tracker: { tests: ~163, lines: 2921, describes: [init, create, list, view, update, history, error codes, full CRUD cycle, user management (register/list/revoke/regenerate), auth integration, comments auth integration, comments (add/update/delete/list + error paths), hierarchy (parentId create, parentId update, reparent, cascade-close, status constraints, auth integration for hierarchy, edge cases), blockages (add/resolve/delete/list + batch atomicity + cycle detection + auto-resolution + impact score + NOT_FOUND/NOT_INITIALIZED), blockages auth integration (read-only/strict modes + token validation)] }
-    cli_commands: { tests: ~47, lines: 884, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests, blockages add (single + multiple + cycle + NOT_FOUND), blockages resolve, blockages delete, blockages list (happy path + empty + NOT_FOUND)] }
-    core_dependency_manager: { tests: 19, lines: 206, describes: [addBlockage (both maps, idempotency, immutability), resolveBlockage (both maps, non-existent no-op, already resolved), deleteBlockage (both maps, non-existent no-op, selective removal in blockedBy, selective removal in blocks), getImpactScore (active count, zero for no blocks, ignores resolved), detectCycle (direct, transitive, no cycle, ignores resolved, self-block, same blocker multiple issues)] }
-    core_index_manager: { tests: ~32, lines: 366, describes: [insertEntry, findEntry, updateEntry, updateEntry closed array, removeEntry, parent/children index operations] }
+
+  directory_structure: |
+    tests/
+    ├── helpers/                    # Shared test utilities
+    │   ├── setup.ts                # createTestDir, cleanupTestDir (tmpdir fs isolation)
+    │   ├── fixtures.ts             # createIssueParams, updateIssueParams factory functions
+    │   └── assertions.ts           # expectError, expectOk helper assertions
+    ├── core/                       # Core module tests (unit + integration)
+    │   ├── tracker/                # Tracker class — split by feature domain
+    │   │   ├── tracker-init.test.ts        # init() — 6 tests
+    │   │   ├── tracker-crud.test.ts        # create/list/view/update/history — 38 tests
+    │   │   ├── tracker-errors.test.ts      # error codes + full CRUD cycle — 7 tests
+    │   │   ├── tracker-comments.test.ts    # comments add/update/delete/list — 26 tests
+    │   │   ├── tracker-hierarchy.test.ts   # parentId create, status constraints, reparent, cascade-close — 23 tests
+    │   │   ├── tracker-blockages.test.ts   # blockages CRUD + batch + cycles + auto-resolve + impact + auth — 30 tests
+    │   │   ├── tracker-auth.test.ts        # auth integration (open/read-only/strict + comments + hierarchy) — 19 tests
+    │   │   └── tracker-users.test.ts       # user management (register/list/revoke/regenerate) — 14 tests
+    │   ├── events/                 # Event engine — split by function
+    │   │   ├── append-event.test.ts        # appendEvent fs operations — 3 tests
+    │   │   ├── compute-state.test.ts       # computeState pure function — 10 tests
+    │   │   ├── compute-comments.test.ts    # computeComments pure function — 8 tests
+    │   │   └── replay-events.test.ts       # replayEvents fs operations — 2 tests
+    │   ├── tracker.test.ts         # Tracker monolithic (163 tests) — DEPRECATED, kept for reference
+    │   ├── events.test.ts          # Events monolithic (23 tests) — DEPRECATED, kept for reference
+    │   ├── auth.test.ts            # resolveAuthor isolation — 13 tests
+    │   ├── dependency-manager.test.ts  # Pure function tests — 19 tests
+    │   ├── hierarchy.test.ts       # Pure validation functions — 29 tests
+    │   ├── index-manager.test.ts   # Index operations — ~32 tests
+    │   ├── id.test.ts              # generateId, generateCommentId — 8 tests
+    │   ├── file-io.test.ts         # atomicWriteJSON, readJSON — 6 tests
+    │   └── resolution.test.ts      # resolveTrackerDir — 4 tests
+    ├── cli/                        # CLI integration tests (subprocess)
+    │   └── commands.test.ts        # All CLI commands — ~47 tests
+    └── integration/                # Placeholder for future integration tests (empty)
+
+  file_naming_convention:
+    monolithic_files: "{module}.test.ts" — single file per source module (e.g., auth.test.ts, id.test.ts)
+    split_files: "{module}-{feature}.test.ts" — feature-scoped slices of a large module
+    examples:
+      - "tracker-crud.test.ts" — Tracker create/list/view/update/history
+      - "tracker-blockages.test.ts" — Tracker blockages domain
+      - "compute-state.test.ts" — computeState function tests
+    rule: "Split when a single test file exceeds ~500 lines or covers multiple distinct feature domains"
+
+  split_organization:
+    tracker_split:
+      monolithic: "tracker.test.ts (2921 lines, 163 tests)"
+      split_total: "8 files, 3064 lines, 163 tests — same test count, organized by domain"
+      files:
+        tracker-init: { tests: 6, lines: 126, describes: ["init()"] }
+        tracker-crud: { tests: 38, lines: 542, describes: ["create()", "list()", "view()", "update()", "history()"] }
+        tracker-errors: { tests: 7, lines: 201, describes: ["error codes match specification", "full CRUD cycle"] }
+        tracker-comments: { tests: 26, lines: 454, describes: ["comments (add/update/delete/list + error paths)"] }
+        tracker-hierarchy: { tests: 23, lines: 550, describes: ["hierarchy — create with parentId", "hierarchy — update status with children (downward)", "hierarchy — update status upward promotion", "hierarchy — reparenting"] }
+        tracker-blockages: { tests: 30, lines: 623, describes: ["blockages", "blockages auth integration"] }
+        tracker-auth: { tests: 19, lines: 364, describes: ["auth integration", "comments auth integration", "auth + hierarchy integration"] }
+        tracker-users: { tests: 14, lines: 206, describes: ["user management (usersRegister, usersList, usersRevoke, usersRegenerate)"] }
+    events_split:
+      monolithic: "events.test.ts (543 lines, 23 tests)"
+      split_total: "4 files, 575 lines, 23 tests — same test count, organized by function"
+      files:
+        append-event: { tests: 3, lines: 88, describes: ["appendEvent"] }
+        compute-state: { tests: 10, lines: 221, describes: ["computeState"] }
+        compute-comments: { tests: 8, lines: 212, describes: ["computeComments"] }
+        replay-events: { tests: 2, lines: 54, describes: ["replayEvents"] }
+
+  other_test_files:
+    cli_commands: { tests: ~47, lines: 884, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests, blockages add/resolve/delete/list] }
+    core_dependency_manager: { tests: 19, lines: 206, describes: [addBlockage, resolveBlockage, deleteBlockage, getImpactScore, detectCycle] }
+    core_index_manager: { tests: ~32, lines: 366, describes: [insertEntry, findEntry, updateEntry, removeEntry, parent/children index operations] }
     core_hierarchy: { tests: 29, lines: 304, describes: [isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue] }
-    core_events: { tests: 23, lines: 543, describes: [computeState, appendEvent, replayEvents, computeComments] }
     core_auth: { tests: 13, lines: 202, describes: [open mode, read-only mode, strict mode, env var fallback] }
     core_id: { tests: 8, lines: 52, describes: [generateId, generateCommentId] }
     core_file_io: { tests: 6, lines: 90, describes: [atomicWriteJSON, readJSON] }
@@ -113,10 +177,13 @@ learnings:
     - "Each test file uses beforeEach to create a fresh test directory and afterEach to clean up."
     - "CLI command tests spawn the CLI via bun subprocess and check stdout/exit codes."
     - "auth.test.ts tests resolveAuthor in isolation — doesn't need Tracker instance."
-    - "events.test.ts tests computeState, appendEvent, replayEvents, computeComments — pure functions + fs."
+    - "Split test files: tracker/ and events/ subdirectories contain feature-scoped slices. Each file focuses on one domain (CRUD, auth, comments, hierarchy, blockages, users, init). All split files nest under a top-level describe('Tracker') or describe('Event Engine') to maintain discoverability."
+    - "Monolithic files tracker.test.ts and events.test.ts still exist but are deprecated — the split files in tracker/ and events/ contain the same tests reorganized."
+    - "File naming: tracker-{feature}.test.ts for Tracker slices, {function-name}.test.ts for event engine slices."
+    - "Split threshold: ~500 lines or multiple distinct feature domains triggers a split."
     - "resolution.ts has 93.75% coverage — the filesystem-root walk-up edge case (parent === current) is untested."
-    - "Hierarchy tests: pure validation functions in hierarchy.test.ts, integration tests in tracker.test.ts (cascade-close, reparent, status constraints)."
-    - "Auth integration tests for hierarchy: read-only mode blocks create/update with hierarchy ops, tested in tracker.test.ts."
+    - "Hierarchy tests: pure validation functions in hierarchy.test.ts, integration tests in tracker/tracker-hierarchy.test.ts (cascade-close, reparent, status constraints)."
+    - "Auth integration tests spread across: tracker/tracker-auth.test.ts (general + comments + hierarchy auth), tracker/tracker-blockages.test.ts (blockages auth)."
     - "Edge cases tested: same status no-op on update, reparent from null, same parentId no-op, done parent allowed, mixed cascade (multiple children at different statuses), already-closed children."
   error_handling:
     - "TrackgenticError carries result code, message, and exitCode. 13 error codes defined."
@@ -142,7 +209,7 @@ learnings:
     - "CLI blockages commands use --by flag for blocker IDs (comma-separated or repeated). blockages list takes a single positional issueId."
     - "Auth integration tested for blockages: add/resolve/delete are write operations (require auth in read-only/strict), list is a read operation (allowed in read-only, blocked in strict)."
     - "dependency-manager.test.ts is 19 pure function tests with 35 assertions — no filesystem needed. Empty DependenciesFile fixture used as starting point."
-    - "Tracker blockages section added ~33 new tests (163 total, was ~130). Covers: happy paths, batch atomicity, cycle detection, NOT_FOUND for blocked/blocker, NOT_INITIALIZED, auto-resolution for done/closed, auto-resolution no-op for no active blocks, selective auto-resolution (only active, skip resolved), impact score sort verification."
-    - "Blockages auth integration section: 9 tests covering read-only mode (TOKEN_REQUIRED for add/resolve/delete, OK for list), strict mode (TOKEN_REQUIRED for all including list), valid token (author from token in events), invalid token (INVALID_TOKEN)."
+    - "Tracker blockages section: ~33 tests in tracker/tracker-blockages.test.ts. Covers: happy paths, batch atomicity, cycle detection, NOT_FOUND for blocked/blocker, NOT_INITIALIZED, auto-resolution for done/closed, auto-resolution no-op for no active blocks, selective auto-resolution (only active, skip resolved), impact score sort verification."
+    - "Blockages auth integration section: 9 tests in tracker/tracker-blockages.test.ts covering read-only mode (TOKEN_REQUIRED for add/resolve/delete, OK for list), strict mode (TOKEN_REQUIRED for all including list), valid token (author from token in events), invalid token (INVALID_TOKEN)."
     - "CLI blockages section: 10 tests covering add (single + multiple + cycle error + NOT_FOUND), resolve, delete, list (happy path + empty arrays + NOT_FOUND)."
     - "Self-block test: detectCycle catches A blocked by A — the BFS starts at blockerId which equals blockedId, immediately returns true."

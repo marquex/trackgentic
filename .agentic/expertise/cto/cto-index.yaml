@@ -9,7 +9,7 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 6 complete. Blockages: dependency-manager.ts (cycle detection, batch atomicity, bidirectional maps), 4 Tracker methods, auto-resolution on done/closed, impact score in list sort, CLI commands. Quality validated. Ready for Phase 7 (polish & hardening)."
+expertise_status: "Phase 6 complete. library-quality refactored test suite into per-feature files (528 tests, 1793 assertions). Ready for Phase 7 (polish & hardening)."
 
 project_overview:
   name: trackgentic
@@ -161,3 +161,6 @@ session_log:
   - session: 27
     date: "2026-05-10"
     summary: "Phase 6 implementation. Created Phase 6 spec (07-phase6-blockages-spec.md) with full details: dependency-manager (7 functions including cycle detection via transitive blockedBy walk, batch atomicity with projected state), 4 Tracker methods, auto-resolution on done/closed status transitions, impact score in list sort, CLI blockages commands. Delegated to library-developer — completed. Files modified: dependency-manager.ts (full implementation), tracker.ts (blockage methods + auto-resolution + impact sort), events.ts, runner.ts, blockages.ts (new CLI commands). New tests: dependency-manager.test.ts. library-quality validation delegated and running in background."
+  - session: 28
+    date: "2026-05-11"
+    summary: "library-quality refactored large test files into smaller per-feature files. Ran refactored tracker.test.ts: 163 tests, 429 assertions, 100% lines, all green. Delegated expertise update to library-quality to document new test structure. library-quality updated: 528 tests, 1793 assertions total. New layout: tests/core/tracker/ (8 split files), tests/core/events/ (4 split files), naming convention {module}-{feature}.test.ts, split threshold ~500 lines. Monolithic files marked deprecated."
