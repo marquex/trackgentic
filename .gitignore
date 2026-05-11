@@ -6,6 +6,9 @@ dist/
 build/
 out/
 
+# Generated docs
+docs-html/
+
 # Bun
 *.bun
 .bun/

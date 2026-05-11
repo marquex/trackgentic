@@ -14,6 +14,8 @@ access:
     permissions: [read, write, delete]
   - path: .agentic/specs/**
     permissions: [read, write, delete]
+  - path: ./.github/**
+    permissions: [read, write]
   - path: ./*
     permissions: [read, write]
 hooks:

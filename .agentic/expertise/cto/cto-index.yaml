@@ -9,17 +9,17 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Phase 8 build pipeline complete. tsup compiles to ESM+CJS+dts+CLI binary. 549 tests, 1950 assertions, all gates pass. TypeDoc HTML output and npm publish remain."
+expertise_status: "Publish pipeline complete. CI + Release workflows created. TypeDoc HTML configured. Remaining: user adds NPM_TOKEN secret, sets GitHub Pages source to 'GitHub Actions', cuts first v0.1.0 tag."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Phase 8 build complete. tsup produces dist/ with ESM+CJS+dts+CLI binary. TypeDoc HTML and npm publish remain.
+  stage: Publish pipeline complete. CI + Release workflows in .github/workflows/. TypeDoc HTML configured. User needs to add NPM_TOKEN secret, set Pages source, cut first release tag.
   bun_version: "1.3.11"
   build_tool: tsup (implemented, producing dist/)
-  docs_tool: TypeDoc HTML output (decided, not yet configured)
+  docs_tool: TypeDoc HTML output (configured, generates to docs-html/)
 
 detail_files:
   - path: architecture.yaml
@@ -68,13 +68,19 @@ delegation_workflow:
     Never skip the quality validation step. This ensures code is clean, tested, and documented.
   timeout_constraint: |
     Bash tool has a 10-minute (600000ms) timeout. Large phases must be split into sub-delegations of ~5-8 minutes each.
-    Split strategy for Phase 3: (A) auth.ts + errors.ts, (B) user methods in tracker.ts, (C) auth integration into existing methods + CLI commands, (D) library-quality validation.
+    Split strategy for Phase 3: (A) auth.ts + errors.ts, (B) user methods in tracker.ts, (C) auth integration into existing methods + CLI commands, (D) library-quality validation).
     Each sub-task should be scoped to a few files to stay within timeout.
+  docs_ownership: |
+    library-quality owns documentation tasks: TypeDoc configuration, doc generation, docs scripts.
+    When docs need updating or generating, delegate directly to library-quality (not library-developer).
+  access_gaps: |
+    Resolved: user granted CTO access to .github/ folder. CTO now owns workflow files.
+    Root .gitignore is also writable by CTO.
   note: "Self-check and validation steps are enforced via agent system prompts. No need to duplicate in delegation messages."
   library-developer:
     focus: "Focus delegation messages on the implementation task itself. The agent self-checks typecheck+lint+test before completion."
   library-quality:
-    focus: "Always pass the same spec file used for implementation so quality can validate alignment with specs, not just code quality. Include the spec path, what changed, and what behaviors to validate."
+    focus: "Always pass the same spec file used for implementation so quality can validate alignment with specs, not just code quality. Include the spec path, what changed, and what behaviors to validate. Also handles documentation tasks (TypeDoc, docs generation)."
 
 docs_absorbed:
   - docs/introduction.md — project vision, file structure, issue properties, CLI overview, config
@@ -183,3 +189,12 @@ session_log:
   - session: 33
     date: "2026-05-11"
     summary: "User approved. Created Phase 8 build spec (.agentic/specs/09-phase8-build-spec.md). Delegated to library-developer — completed successfully. Key finding: no Bun-specific APIs existed in the codebase (already using node:fs/promises). tsup.config.ts created with dual entry points (library ESM+CJS+dts, CLI binary bundled). package.json updated for dist/-based distribution with node>=20 engine. Delegated to library-quality for validation — all gates pass: 549 tests, 1950 assertions, typecheck clean, lint clean. CJS+ESM imports verified. CLI binary verified end-to-end (init, create, list, view). Build pipeline fully operational."
+  - session: 34
+    date: "2026-05-11"
+    summary: "Designed publish pipeline for npm + GitHub Pages docs. Two GitHub Actions workflows: (1) CI — quality gates on every push/PR to main, (2) Release — triggered by version tag push (v*), runs quality → build → npm publish → TypeDoc HTML → deploy to GitHub Pages. Single sequential job in release ensures docs don't deploy if npm publish fails. Developer workflow: npm version patch → git push --follow-tags. One-time manual setup: NPM_TOKEN secret, GitHub Pages source set to 'GitHub Actions'. TypeDoc output to docs-html/ directory. Awaiting user approval to create formal spec and delegate implementation."
+  - session: 35
+    date: "2026-05-11"
+    summary: "User clarified library-quality owns documentation tasks (not library-developer). Created spec 10-publish-pipeline-spec.md. Delegated to library-quality: TypeDoc HTML config done (typedoc.json updated, docs script added, docs-html/ generated with full API docs). CI/Release workflows and .gitignore update blocked — no agent has write access to .github/ or root .gitignore. Access boundary gap identified: .github/workflows/ falls outside all three agents' access rules. User needs to create .github/workflows/{ci,release}.yml and append docs-html/ to .gitignore manually. Also learned: typedoc-plugin-markdown is now unused but still in devDependencies — cleanup opportunity."
+  - session: 36
+    date: "2026-05-11"
+    summary: "User granted CTO access to .github/ folder. Created CI workflow (.github/workflows/ci.yml) and Release workflow (.github/workflows/release.yml). Updated .gitignore with docs-html/ entry. Publish pipeline now fully implemented. Remaining manual steps for user: add NPM_TOKEN secret, set GitHub Pages source to 'GitHub Actions', cut first v0.1.0 tag."
