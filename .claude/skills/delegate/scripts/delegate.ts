@@ -2,21 +2,16 @@
  * delegate.ts
  *
  * Delegation script that spawns a child claude process targeting a specific agent.
- * Uses --output-format stream-json to capture the full conversation event stream,
- * writes it to agent_logs/{agent-name}-{run-id}.jsonl, and logs delegation and
- * response entries to the session's _conversation.jsonl.
+ * Uses --output-format stream-json to capture the conversation event stream and
+ * extract the final text response.
  *
  * Usage: bun .claude/skills/delegate/scripts/delegate.ts <agent-name> <prompt>
  *
  * Environment variables:
- *   CRYPLATIVE_SESSION_ID - Shared session ID for all agents in a chain.
- *                           Generated if not set.
- *   CRYPLATIVE_PRINT_MODE - Set to "1" for child processes spawned with -p,
- *                           so the session-logger logs the prompt as
- *                           "initial_prompt" instead of "user_prompt".
+ *   CLAUDE_AGENT_NAME - Name of the calling agent. Used for subordinate
+ *                       validation. Defaults to "global" if not set.
  */
 
-import { mkdir, appendFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -32,15 +27,6 @@ function main() {
   const agentName = args[0];
   const prompt = args.slice(1).join(" ");
   const projectDir = process.cwd();
-  const sessionsDir = join(projectDir, ".claude", "sessions");
-
-  // Get or generate session ID
-  let sessionId = process.env.CRYPLATIVE_SESSION_ID;
-  if (!sessionId) {
-    sessionId = crypto.randomUUID();
-  }
-
-  const delegationId = `del-${crypto.randomUUID()}`;
 
   // Determine the calling agent name (from env or default to "global")
   const fromAgent = process.env.CLAUDE_AGENT_NAME || "global";
@@ -57,36 +43,10 @@ function main() {
     }
   }
 
-  // Generate a 6-char run ID for this agent invocation.
-  // This is passed to the child process so its hooks use the same run_id.
-  const runId = generateRunId();
-
-  runDelegation(
-    sessionsDir,
-    sessionId,
-    delegationId,
-    fromAgent,
-    agentName,
-    prompt,
-    runId
-  ).catch((err) => {
+  runDelegation(agentName, prompt).catch((err) => {
     console.error(`Delegation failed: ${(err as Error).message}`);
     process.exit(1);
   });
-}
-
-/**
- * Generate a 6-character random alphanumeric string for agent run identification.
- */
-function generateRunId(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  const bytes = new Uint8Array(6);
-  crypto.getRandomValues(bytes);
-  for (let i = 0; i < 6; i++) {
-    result += chars[bytes[i] % chars.length];
-  }
-  return result;
 }
 
 /**
@@ -176,32 +136,6 @@ function validateDelegation(fromAgent: string, targetAgent: string, projectDir: 
 }
 
 /**
- * Check if a message is a Claude Code skill setup injection.
- * These are user messages whose first content block's text starts with
- * <command-message> — they contain the full skill definition and are
- * very large, so we filter them out from agent_logs.
- */
-function isSkillSetupMessage(message: Record<string, unknown>): boolean {
-  if (message.role !== "user") return false;
-  const content = message.content;
-  if (typeof content === "string") {
-    return content.trimStart().startsWith("<command-message>");
-  }
-  if (Array.isArray(content) && content.length > 0) {
-    const first = content[0];
-    if (
-      first &&
-      typeof first === "object" &&
-      first.type === "text" &&
-      typeof first.text === "string"
-    ) {
-      return first.text.trimStart().startsWith("<command-message>");
-    }
-  }
-  return false;
-}
-
-/**
  * Extract text content from a single message object.
  * Handles both string content and array of content blocks (text only).
  */
@@ -274,43 +208,9 @@ function extractTextFromStreamJson(lines: string[]): string {
 }
 
 async function runDelegation(
-  sessionsDir: string,
-  sessionId: string,
-  delegationId: string,
-  fromAgent: string,
   agentName: string,
-  prompt: string,
-  runId: string
+  prompt: string
 ) {
-  const sessionPath = join(sessionsDir, sessionId);
-  const conversationFile = join(sessionPath, "_conversation.jsonl");
-  const agentLogsDir = join(sessionPath, "agent_logs");
-
-  // Ensure session and agent_logs directories exist
-  if (!(await Bun.file(sessionPath).exists())) {
-    await mkdir(sessionPath, { recursive: true });
-  }
-  if (!(await Bun.file(agentLogsDir).exists())) {
-    await mkdir(agentLogsDir, { recursive: true });
-  }
-
-  // Write delegation entry
-  const delegationEntry = {
-    type: "delegation",
-    timestamp: new Date().toISOString(),
-    agent: fromAgent,
-    delegated_to: agentName,
-    delegation_type: "skill",
-    prompt,
-    delegation_id: delegationId,
-    agent_run_id: runId,
-  };
-
-  await appendFile(
-    conversationFile,
-    JSON.stringify(delegationEntry) + "\n"
-  );
-
   // Spawn child claude process with --output-format stream-json
   // Note: --verbose is required when using --output-format stream-json with --print
   // Note: --dangerously-skip-permissions skips permission prompts so the subagent
@@ -320,10 +220,6 @@ async function runDelegation(
     {
       env: {
         ...Bun.env,
-        CRYPLATIVE_SESSION_ID: sessionId,
-        CRYPLATIVE_DELEGATED_SESSION: "1",
-        CRYPLATIVE_PRINT_MODE: "1",
-        CRYPLATIVE_AGENT_RUN_ID: runId,
         CLAUDE_AGENT_NAME: agentName,
       },
       stdout: "pipe",
@@ -332,9 +228,6 @@ async function runDelegation(
   );
 
   // Read stdout stream line by line, collecting all lines for text extraction.
-  // Stream user/assistant messages to agent_logs in real-time so logs appear
-  // as the agent works, not just after it finishes.
-  const agentLogsPath = join(agentLogsDir, `${agentName}-${runId}.jsonl`);
   const streamJsonLines: string[] = [];
   const reader = child.stdout.getReader();
   const decoder = new TextDecoder();
@@ -406,15 +299,6 @@ async function runDelegation(
               lastAssistantText = text;
             }
           }
-
-          // Stream user/assistant messages to agent_logs in real-time.
-          // The Stop hook checks if this file exists and skips writing if so,
-          // avoiding any race condition between the two writers.
-          if ((event.type === "user" || event.type === "assistant") && event.message) {
-            if (!isSkillSetupMessage(event.message)) {
-              await appendFile(agentLogsPath, JSON.stringify(event.message) + "\n");
-            }
-          }
         } catch {
           // Not valid JSON or not a message event — skip
           continue;
@@ -442,22 +326,6 @@ async function runDelegation(
   if (textResponse) {
     process.stdout.write(textResponse);
   }
-
-  // Write response entry
-  const responseEntry = {
-    type: "response",
-    timestamp: new Date().toISOString(),
-    agent: agentName,
-    delegation_id: delegationId,
-    response_preview: textResponse.substring(0, 500),
-    exit_code: exitCode,
-    agent_run_id: runId,
-  };
-
-  await appendFile(
-    conversationFile,
-    JSON.stringify(responseEntry) + "\n"
-  );
 
   // Exit with the child's exit code
   process.exit(exitCode);

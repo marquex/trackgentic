@@ -5,7 +5,7 @@ argument-hint: "<agent-name> <prompt>"
 
 # Delegate Task
 
-Use this skill to delegate a task to another agent by name. The delegation is logged to the shared session's conversation log, creating an auditable record of inter-agent communication.
+Use this skill to delegate a task to another agent by name.
 
 ## How to Use
 

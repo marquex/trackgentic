@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Publish pipeline complete. CI + Release workflows created. TypeDoc HTML configured. Remaining: user adds NPM_TOKEN secret, sets GitHub Pages source to 'GitHub Actions', cuts first v0.1.0 tag."
+expertise_status: "Publish pipeline complete. README.md and MIT LICENSE created. CI + Release workflows created. TypeDoc HTML configured. Remaining: user adds NPM_TOKEN secret, sets GitHub Pages source to 'GitHub Actions', cuts first v0.1.0 tag."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Publish pipeline complete. CI + Release workflows in .github/workflows/. TypeDoc HTML configured. User needs to add NPM_TOKEN secret, set Pages source, cut first release tag.
+  stage: Publish pipeline complete. README.md + MIT LICENSE created. CI + Release workflows in .github/workflows/. TypeDoc HTML configured. User needs to add NPM_TOKEN secret, set Pages source, cut first release tag.
   bun_version: "1.3.11"
   build_tool: tsup (implemented, producing dist/)
   docs_tool: TypeDoc HTML output (configured, generates to docs-html/)
@@ -198,3 +198,6 @@ session_log:
   - session: 36
     date: "2026-05-11"
     summary: "User granted CTO access to .github/ folder. Created CI workflow (.github/workflows/ci.yml) and Release workflow (.github/workflows/release.yml). Updated .gitignore with docs-html/ entry. Publish pipeline now fully implemented. Remaining manual steps for user: add NPM_TOKEN secret, set GitHub Pages source to 'GitHub Actions', cut first v0.1.0 tag."
+  - session: 37
+    date: "2026-05-12"
+    summary: "Created README.md at project root: introduction, install, quick start (CLI + programmatic API), how it works (file structure, event sourcing), status flow, hierarchy constraints, auth configuration, license link. Created LICENSE file (MIT, 2026)."

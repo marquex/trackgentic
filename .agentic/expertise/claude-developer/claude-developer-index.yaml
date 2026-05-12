@@ -71,7 +71,6 @@ architecture:
         purpose: Delegate tasks to subordinate agents via claude CLI subprocess
         has_scripts: true
         scripts: [delegate.ts]
-        reference: scripts/reference.md
 
   hooks:
     path: .claude/hooks/
@@ -116,8 +115,9 @@ conventions:
   - All hooks use bun runtime (TypeScript, no build step)
   - Agent frontmatter uses custom YAML parser (no yaml dependency) in enforce-agent-access
   - Agent marker expansion (ACCESS_RULES, SUBORDINATES) never modifies files on disk
-  - Skills with scripts have a scripts/ folder and reference.md
+  - Skills with scripts have a scripts/ folder
   - Delegate script spawns `claude --agent <name> -p <prompt>` with stream-json output — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
+  - Delegate script has no session/logging — it only spawns the child process, shows progress, and returns the text response
   - Stop hooks from settings.json don't reliably fire for `-p` mode agent sessions — all expertise hooks now defined in agent frontmatter only
   - Internal subagents (Agent tool / @-mention) only run frontmatter hooks — settings.json hooks don't fire inside them
   - Avoid MCP — prefer CLI tools via skills
@@ -154,3 +154,4 @@ resolved:
   - "FIXED: Expertise injection for delegated subagents — expertise.hook.ts now handles SessionStart event (primary injection point). Uses flag-based de-duplication: SessionStart writes flag + injects; UserPromptSubmit checks flag and skips if already injected. This ensures expertise is available from session start in both interactive and -p (delegated) modes."
   - "FIXED: Stop hook not reliably firing for delegated agents — all expertise hooks (SessionStart, UserPromptSubmit, Stop) moved from settings.json to agent frontmatter. hire-expert template updated so new agents get hooks automatically."
   - "FIXED: library-quality agent Stop hook had typo in command path — expertence.hook.ts (missing 'i') → expertise.hook.ts. This caused the Stop hook to fail silently (bun couldn't find the file), so the agent never received expertise update reminders."
+  - "REMOVED: Session/logging infrastructure from delegate skill — no more _conversation.jsonl, agent_logs, CRYPLATIVE_SESSION_ID, or reference.md. Delegate script now only spawns the child process, tracks progress, and returns the text response."
