@@ -2,7 +2,12 @@
 # Current state, roadmap, open questions, and risks.
 
 current_state:
-  phase: Phase 7 complete — all implementation phases done
+  phase: Dogfooding phase — using trackgentic to track its own development
+  dogfooding:
+    status: active
+    setup: "CLI linked globally via npm link from packages/library/. Issues stored in .trackgentic/ at repo root."
+    workflow: "After code changes, run `bun run build` in packages/library/. Then `trackgentic` uses the fresh build via symlink."
+    test_issue: mp27msuvaj ("Test: verify dogfooding setup works")
   source_code: All 7 phases implemented (event engine, CRUD, auth, comments, hierarchy, blockages, polish & hardening)
   monorepo_files:
     - package.json (root workspace config)
@@ -164,6 +169,10 @@ current_state:
   phase_7_start_date: "2026-05-11"
   phase_7_complete_date: "2026-05-11"
   blockers: []
+  dogfooding_notes:
+    - "Always run `trackgentic` commands from the repo root (not packages/library/) so .trackgentic/ resolves to root"
+    - "The symlink via npm link means any `bun run build` in packages/library/ immediately updates the global command"
+    - ".trackgentic/ is NOT in .gitignore — issues are tracked in git alongside code"
   next_phase:
     phase: 8
     name: "Build, Documentation & npm Distribution"

@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Publish pipeline complete. README.md and MIT LICENSE created. CI + Release workflows created. TypeDoc HTML configured. Remaining: user adds NPM_TOKEN secret, sets GitHub Pages source to 'GitHub Actions', cuts first v0.1.0 tag."
+expertise_status: "Dogfooding phase started. trackgentic CLI linked globally via npm link from packages/library/. .trackgentic/ initialized at repo root (NOT inside packages/library/). First test issue created (mp27msuvaj). Publish pipeline complete — remaining manual: NPM_TOKEN secret, GitHub Pages source, first v0.1.0 tag."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Publish pipeline complete. README.md + MIT LICENSE created. CI + Release workflows in .github/workflows/. TypeDoc HTML configured. User needs to add NPM_TOKEN secret, set Pages source, cut first release tag.
+  stage: Dogfooding phase. trackgentic is now used to track its own development. CLI linked globally via `npm link` from packages/library/. Issues stored in repo-root .trackgentic/. Publish pipeline complete — remaining manual: NPM_TOKEN, GitHub Pages source, first tag.
   bun_version: "1.3.11"
   build_tool: tsup (implemented, producing dist/)
   docs_tool: TypeDoc HTML output (configured, generates to docs-html/)
@@ -201,3 +201,6 @@ session_log:
   - session: 37
     date: "2026-05-12"
     summary: "Created README.md at project root: introduction, install, quick start (CLI + programmatic API), how it works (file structure, event sourcing), status flow, hierarchy constraints, auth configuration, license link. Created LICENSE file (MIT, 2026)."
+  - session: 38
+    date: "2026-05-12"
+    summary: "Started dogfooding — trackgentic now tracks its own development. Linked CLI globally via `npm link` from packages/library/ (symlinks trackgentic → packages/library/dist/bin.js). Initialized .trackgentic/ at repo root (NOT inside packages/library/ — that was accidental first run, user cleaned it up). Created test issue mp27msuvaj ('Test: verify dogfooding setup works'). Workflow: rebuild with `bun run build` in packages/library/, then `trackgentic` picks up fresh build via symlink. Issues committed to git via .trackgentic/ at repo root."

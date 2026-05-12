@@ -208,3 +208,21 @@ decisions:
       - "Docusaurus — same limitation, heavier setup"
     status: decided
     decided_date: "2026-05-11"
+
+  - id: DD-017
+    title: "Dogfooding: trackgentic tracks its own development"
+    choice: "Use trackgentic as the issue tracker for developing trackgentic itself"
+    rationale:
+      - "Real-world validation — every feature is tested by actual usage, not just unit tests"
+      - "Dogfooding surfaces UX issues early — if the tool is annoying to use, we feel it immediately"
+      - "Living documentation — the .trackgentic/ directory in the repo serves as a real example"
+      - "No external dependency — we don't need GitHub Issues or Jira to track our own work"
+    implementation:
+      - "CLI linked globally via `npm link` from packages/library/ — trackgentic command resolves to local build"
+      - "Issues stored in .trackgentic/ at repo root (not inside packages/library/)"
+      - "Workflow: make code changes → `bun run build` in packages/library/ → `trackgentic` picks up fresh build"
+    tradeoffs:
+      - "Bootstrap paradox — need a working version to track work on making it work (mitigated: Phase 7 is already complete)"
+      - "Build step required between code changes and CLI usage (acceptable — fast build with tsup)"
+    status: decided
+    decided_date: "2026-05-12"

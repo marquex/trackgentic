@@ -1,0 +1,6 @@
+{
+  "auth": {
+    "mode": "open",
+    "defaultUser": "anonymous"
+  }
+}

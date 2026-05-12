@@ -1,0 +1,19 @@
+{
+  "open": [
+    {
+      "id": "mp27msuvaj",
+      "title": "Test: verify dogfooding setup works",
+      "path": "issues/mp27msuvaj.json",
+      "status": "idea",
+      "assignee": null,
+      "parentId": null,
+      "tags": [
+        "test",
+        "dogfood"
+      ],
+      "priority": 5
+    }
+  ],
+  "closed": [],
+  "childrenOf": {}
+}

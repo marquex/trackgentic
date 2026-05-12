@@ -1,0 +1,21 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-12T05:48:41.983Z",
+    "author": "anonymous"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-12T05:48:41.983Z",
+    "author": "anonymous",
+    "content": {
+      "title": "Test: verify dogfooding setup works",
+      "description": "Verify that the trackgentic CLI linked from the monorepo works correctly for dogfooding.",
+      "priority": 5,
+      "tags": [
+        "test",
+        "dogfood"
+      ]
+    }
+  }
+]

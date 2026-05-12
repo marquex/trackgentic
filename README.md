@@ -171,6 +171,31 @@ Auth mode is set in `.trackgentic/config.json`:
 
 Default on `init` is `open` with `defaultUser: "anonymous"`.
 
+## Developing trackgentic
+
+If you're contributing to trackgentic itself, you can link the local build so the `trackgentic` CLI points to your working copy:
+
+```bash
+# From the repo root
+cd packages/library
+npm link            # creates a global symlink to packages/library/dist/bin.js
+cd ../..
+
+# Verify it works
+trackgentic --version   # → 0.1.0
+
+# Initialize dogfooding (issues tracked in this repo)
+trackgentic init
+
+# After making code changes, rebuild to pick them up
+cd packages/library && bun run build && cd ../..
+
+# Create issues to track development work
+trackgentic create "Add feature X" --priority 2 --tags enhancement
+```
+
+The `.trackgentic/` directory at the repo root is committed to git — issues live alongside the code they describe.
+
 ## License
 
 [MIT](LICENSE)
