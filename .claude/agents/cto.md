@@ -6,6 +6,8 @@ model: opus
 skills:
   - agent-expertise
   - delegate
+  - trackgentic
+  - trackgentic-manager
 subordinates:
   - library-developer
   - library-quality

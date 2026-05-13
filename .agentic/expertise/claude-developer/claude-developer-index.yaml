@@ -23,14 +23,14 @@ architecture:
         description: Chief Technology Officer — designs architecture, generates specs, tracks development alignment
         access: [.agentic/expertise/cto/**, ./**]
         subordinates: [library-developer, library-quality]
-        skills: [agent-expertise, delegate]
+        skills: [agent-expertise, delegate, trackgentic, trackgentic-manager]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
       - name: library-developer
         model: opus
         description: TypeScript library developer — owns all technical details of the npm-published library
         access: [.agentic/expertise/library-developer/**, packages/library/**, .agentic/specs/**]
         subordinates: none
-        skills: [agent-expertise]
+        skills: [agent-expertise, trackgentic, trackgentic-subordinate]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
       - name: library-quality
@@ -38,7 +38,7 @@ architecture:
         description: Library quality engineer — generates tests, verifies code quality, produces documentation for the library
         access: [.agentic/expertise/library-quality/**, packages/library/**, .agentic/specs/**]
         subordinates: none
-        skills: [agent-expertise]
+        skills: [agent-expertise, trackgentic, trackgentic-subordinate]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
     notes: |
@@ -71,6 +71,26 @@ architecture:
         purpose: Delegate tasks to subordinate agents via claude CLI subprocess
         has_scripts: true
         scripts: [delegate.ts]
+      - name: trackgentic
+        purpose: Interact with the trackgentic issue tracker — create, list, view, update issues, comments, users, blockages
+        has_scripts: false
+        auth_mechanism: TRACKGENTIC_TOKEN env var prepended to every command — each agent has its own token
+        notes: |
+          Pure reference skill — no scripts, just CLI usage documentation.
+          Each agent should be registered via `trackgentic users register <name>` to get their own token.
+          Tokens should be stored in the agent's expertise files for reuse across sessions.
+      - name: trackgentic-manager
+        purpose: Issue flow for manager agents — triage, assign, monitor, unblock, review, close issues
+        has_scripts: false
+        notes: |
+          Paired with the trackgentic base skill (CLI reference). This skill adds the orchestration workflow on top.
+          Assigned to CTO agent. Subordinate agents get trackgentic-subordinate instead.
+      - name: trackgentic-subordinate
+        purpose: Issue flow for subordinate agents — pick up, execute, report, hand back issues
+        has_scripts: false
+        notes: |
+          Paired with the trackgentic base skill (CLI reference). This skill adds the worker workflow on top.
+          Assigned to library-developer and library-quality agents. Manager agents get trackgentic-manager instead.
 
   hooks:
     path: .claude/hooks/
@@ -134,6 +154,8 @@ patterns:
   - When adding first subordinate to a manager: add delegate skill, add subordinates list, add Delegation section with SUBORDINATES marker before Restricted domain section
   - When adding subsequent subordinates to a manager that already has delegate skill and Delegation section: just add to subordinates list in frontmatter — no structural changes needed
   - Agents that create files (tests, docs) need Write/Edit in their tools list — most expert agents are read-only but quality/doc agents are exceptions
+  - Reference-only skills (no scripts): SKILL.md frontmatter just needs `name` and `description`, no `allowed-tools` or `argument-hint` needed. The body is purely instructional — teaches the agent how to use an external CLI tool, API, or convention. The trackgentic skill is the first example of this pattern.
+  - Role-specific skill splitting: when a base skill has different workflows for different agent roles (e.g. manager vs subordinate), split each workflow into its own skill directory. The base skill holds the shared reference (CLI docs, auth, etc.) and each role skill holds the workflow instructions. Assign agents both the base skill and their role-specific skill. This keeps skill content focused and avoids agents loading irrelevant workflows.
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime

@@ -14,6 +14,17 @@
       "priority": 5
     }
   ],
-  "closed": [],
+  "closed": [
+    {
+      "id": "mp28srq0xs",
+      "title": "Test issue",
+      "path": "issues/mp28srq0xs.json",
+      "status": "closed",
+      "assignee": null,
+      "parentId": null,
+      "tags": [],
+      "priority": 3
+    }
+  ],
   "childrenOf": {}
 }
