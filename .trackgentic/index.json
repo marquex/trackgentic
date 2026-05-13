@@ -107,6 +107,20 @@
         "manual"
       ],
       "priority": 2
+    },
+    {
+      "id": "mp3rc7femf",
+      "title": "Add  subcommand — recommend highest-priority unblocked issue for a user",
+      "path": "issues/mp3rc7femf.json",
+      "status": "todo",
+      "assignee": "library-developer",
+      "parentId": null,
+      "tags": [
+        "feature",
+        "cli",
+        "core"
+      ],
+      "priority": 1
     }
   ],
   "closed": [

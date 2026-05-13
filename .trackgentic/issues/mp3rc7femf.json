@@ -1,0 +1,23 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-13T07:48:06.706Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-13T07:48:06.706Z",
+    "author": "javi",
+    "content": {
+      "title": "Add  subcommand — recommend highest-priority unblocked issue for a user",
+      "status": "todo",
+      "priority": 1,
+      "assignee": "library-developer",
+      "tags": [
+        "feature",
+        "cli",
+        "core"
+      ]
+    }
+  }
+]

@@ -29,6 +29,7 @@ import type {
   IssueStatus,
   ListParams,
   ListResult,
+  NextResult,
   UpdateParams,
   UpdateResult,
   UserEntry,
@@ -502,6 +503,90 @@ export class Tracker {
 
     const events = await replayEvents(issueFilePath);
     return computeState(events, id);
+  }
+
+  /**
+   * Get the recommended next issue to work on for a given user.
+   *
+   * Filters open issues by assignee and active status, excludes blocked issues,
+   * then sorts by priority ASC → impact DESC → id ASC and returns the top issue.
+   *
+   * @param assignee - The assignee name to filter by (case-sensitive)
+   * @returns The recommended ComputedIssue, or `{ result: "NO_ISSUES_AVAILABLE" }`
+   * @throws {TrackgenticError} NOT_INITIALIZED if no `.trackgentic/` directory
+   * @throws {TrackgenticError} TOKEN_REQUIRED if auth mode is strict and no token provided
+   *
+   * @example
+   * ```typescript
+   * const result = await tracker.next("alice");
+   * if ("title" in result) console.log("Work on:", result.title);
+   * else console.log("No issues available:", result.message);
+   * ```
+   */
+  async next(assignee: string): Promise<NextResult> {
+    const trackerDir = resolveTrackerDir(this.cwd);
+    if (!trackerDir) {
+      throw new TrackgenticError(
+        ErrorCodes.NOT_INITIALIZED.result,
+        "No .trackgentic/ directory found. Run `trackgentic init` first.",
+        ErrorCodes.NOT_INITIALIZED.exitCode,
+      );
+    }
+
+    const config = await readJSON<ConfigFile>(join(trackerDir, "config.json"));
+    const users = await readJSON<UsersFile>(join(trackerDir, "users.json"));
+    const authResult = resolveAuthor({ config, users, requiresWrite: false });
+    if (authResult instanceof TrackgenticError) {
+      throw authResult;
+    }
+
+    const index = await readIndex(trackerDir);
+
+    // Filter to open issues assigned to this user with actionable statuses
+    const openStatuses: IssueStatus[] = ["idea", "todo", "in-progress"];
+    let candidates = index.open.filter(
+      (e) => e.assignee === assignee && openStatuses.includes(e.status),
+    );
+
+    // Read dependencies for blockage filtering and impact scoring
+    const deps = readDependenciesSync(trackerDir);
+
+    // Filter out issues with any active blockages
+    candidates = candidates.filter((e) => {
+      const blockedBy = deps.blockedBy[e.id] ?? [];
+      return !blockedBy.some((b) => b.status === "active");
+    });
+
+    // If no candidates remain, return no issues available
+    if (candidates.length === 0) {
+      return {
+        result: "NO_ISSUES_AVAILABLE",
+        message: `No unblocked issues found for user '${assignee}'.`,
+      };
+    }
+
+    // Sort: priority ASC → impact DESC → id ASC
+    candidates.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      const impactA = getImpactScore(deps, a.id);
+      const impactB = getImpactScore(deps, b.id);
+      if (impactA !== impactB) return impactB - impactA;
+      return a.id.localeCompare(b.id);
+    });
+
+    // Take top issue, replay events, return computed state
+    const topEntry = candidates[0]!;
+    const issueFilePath = join(trackerDir, topEntry.path);
+    if (!existsSync(issueFilePath)) {
+      throw new TrackgenticError(
+        ErrorCodes.ISSUE_MISSING.result,
+        `Issue file for \`${topEntry.id}\` is missing.`,
+        ErrorCodes.ISSUE_MISSING.exitCode,
+      );
+    }
+
+    const events = await replayEvents(issueFilePath);
+    return computeState(events, topEntry.id);
   }
 
   /**

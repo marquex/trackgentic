@@ -6,14 +6,14 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Phase 1-8 complete. 549 tests passing (1950 assertions), typecheck & lint clean. Build pipeline with tsup producing CJS+ESM+dts output."
+expertise_status: "Phase 1-8 complete + next command. Build pipeline with tsup producing CJS+ESM+dts output."
 
 knowledge:
   project_structure:
     - "Monorepo: root workspace with packages/library (the npm package)"
     - "Package entry: src/index.ts (barrel exports), src/bin.ts (CLI entry, no hardcoded shebang — tsup banner adds it)"
     - "Types in src/types/, core logic in src/core/, CLI in src/cli/"
-    - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users, comments, blockages)"
+    - "CLI commands in src/cli/commands/ (init, create, list, view, update, history, users, comments, blockages, next)"
     - "Tests in tests/ using bun:test (describe/test/expect)"
     - "Test helpers in tests/helpers/ (setup.ts, fixtures.ts, assertions.ts)"
     - "Test structure: tests/core/ (unit), tests/core/events/ (event tests split by function), tests/core/tracker/ (tracker tests split by domain), tests/cli/, tests/integration/ (edge-cases.test.ts, package.test.ts)"
@@ -76,6 +76,8 @@ knowledge:
     - "blockagesAdd supports batch: multiple blockages in one call, with single cycle-check pass over accumulated proposed edges"
     - "Auto-resolution: tracker.update() auto-resolves blockages when an issue transitions to done/closed status"
     - "List sort uses impact score as tiebreaker (higher impact = earlier in list)"
+    - "readDependenciesSync(trackerDir) — private sync helper in tracker.ts, reads dependencies.json synchronously via readFileSync; needed inside sort comparators where async is not possible"
+    - "tracker.next(assignee) — recommends the best issue to work on for a user; selection algorithm: (1) filter index.open by assignee match + actionable statuses (idea, todo, in-progress), (2) exclude issues with any active blockages, (3) sort by priority ASC → impact DESC → id ASC, (4) take top candidate, replay events, return ComputedIssue; returns {result: 'NO_ISSUES_AVAILABLE', message} if no candidates"
 
   type_system:
     - "All types match spec 02-data-model.md and 03-api-specification.md exactly"
@@ -83,6 +85,7 @@ knowledge:
     - "InitResult is special: ALREADY_INITIALIZED is a valid return (not an error), exit code 0"
     - "UsersRegisterResult, UsersRevokeResult, UsersRegenerateResult use discriminated unions with result field"
     - "TrackgenticError extends Error with result, message, exitCode fields"
+    - "NextResult = ComputedIssue | { result: 'NO_ISSUES_AVAILABLE'; message: string } — discriminated union; check for 'title' property to distinguish"
     - "Error messages polish: IDs wrapped in backticks (e.g., `abc123`), hierarchy messages end with period"
     - "ErrorCodes const object maps error names to {result, exitCode} — 13 error codes defined (exit codes 0-12)"
     - "Event union: CreationEvent | UpdateEvent | CommentEvent | CommentUpdateEvent | CommentDeleteEvent | BlockageAddedEvent | BlockageResolvedEvent | BlockageDeletedEvent"
@@ -123,6 +126,7 @@ knowledge:
     - "blockages resolve <issueId> <blockedById> — resolves a blockage"
     - "blockages delete <issueId> <blockedById> — deletes a blockage"
     - "blockages list <issueId> — lists all blockages on an issue"
+    - "next <userName> — recommends the next issue to work on for a user (no options)"
 
   phase_status:
     phase_1: "COMPLETE — types, core (errors, id, resolution, file-io, tracker.init), CLI (runner, output, init cmd), barrel exports"
@@ -133,3 +137,4 @@ knowledge:
     phase_6: "COMPLETE — dependency-manager.ts (readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore with recursive BFS, detectCycle with DFS), 4 Tracker methods (blockagesAdd with batch cycle detection, blockagesResolve, blockagesDelete, blockagesList), auto-resolution on done/closed transitions, impact score in list sort, CLI blockages subcommand (add/resolve/delete/list). BLOCKAGE_CYCLE error. 58 new tests across dependency-manager.test.ts + additions to tracker.test.ts + commands.test.ts."
     phase_7: "COMPLETE — polish & hardening. (1) JSDoc on all public exports (Tracker + 17 methods, all types, errors, auth). (2) Error message polish — IDs wrapped in backticks, hierarchy messages get period. (3) Edge-case integration tests — 18 new tests (empty tracker, corrupt JSON, missing files, large volume, self-referencing). (4) Package config — prepublishOnly script, package.test.ts (3 tests). 549 tests, 1948 assertions total. All implementation phases done."
     phase_8: "COMPLETE — build pipeline. (1) tsup v8.5.1 installed as devDependency. (2) tsup.config.ts with two entry points: library (ESM+CJS+dts, commander external) and CLI binary (bundled, node shebang via banner). (3) package.json updated: main→dist/index.cjs, module→dist/index.js, types→dist/index.d.ts, dual exports with types conditions, bin→dist/bin.js, files→dist/, engines→node>=20, added build script. (4) Removed hardcoded shebang from bin.ts (tsup banner handles it). (5) Node.js compat audit: no Bun-specific APIs — codebase uses node:fs/promises. (6) Build produces: dist/index.js (ESM), dist/index.cjs (CJS), dist/index.d.ts, dist/index.d.cts, dist/bin.js + sourcemaps. (7) All quality gates pass: 549 tests, 1950 assertions. (8) Verified: CJS import, ESM import, CLI binary --help/--version all work."
+    next_command: "COMPLETE — `next <userName>` command. (1) NextResult type in src/types/api.ts — ComputedIssue | {result, message} discriminated union. (2) Tracker.next(assignee) in src/core/tracker.ts — validates init + read auth, filters index.open by assignee + actionable statuses (idea/todo/in-progress), excludes issues with active blockages, sorts by priority ASC → impact DESC → id ASC, replays events and returns top ComputedIssue. Returns NO_ISSUES_AVAILABLE if no candidates. (3) readDependenciesSync() private helper in tracker.ts — sync file read for use inside sort comparator. (4) CLI: src/cli/commands/next.ts (nextAction handler), registered in runner.ts as `next <userName>`. (5) Exported NextResult from barrel (src/index.ts, src/types/index.ts)."

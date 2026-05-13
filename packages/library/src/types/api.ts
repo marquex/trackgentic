@@ -91,6 +91,11 @@ export type ListResult = IndexEntry[];
 /** Result of viewing an issue's full computed state. */
 export type ViewResult = ComputedIssue | TrackgenticError;
 
+// ─── Next ───────────────────────────────────────────────────────────
+
+/** Result of the next command — the recommended issue to work on, or no issues available. */
+export type NextResult = ComputedIssue | { result: "NO_ISSUES_AVAILABLE"; message: string };
+
 // ─── History ────────────────────────────────────────────────────────
 
 import type { Event } from "./event";

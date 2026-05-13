@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — Phases 1-6 complete. 528 tests, 1793 assertions, 99.38% line coverage. Prettier + ESLint tooling. Tests refactored into focused per-feature files."
+expertise_status: "Active — Phases 1-7 in progress. 569 tests, 1997 assertions, 98.46% tracker.ts line coverage. Prettier + ESLint tooling. Tests refactored into focused per-feature files. Phase 7: `next <user-name>` command validated (20 tests)."
 
 project_phases:
   phase_1_foundation:
@@ -33,19 +33,37 @@ project_phases:
     modules: [dependency-manager.ts (181 lines — readDependencies, writeDependencies, addBlockage, resolveBlockage, deleteBlockage, getImpactScore, detectCycle), tracker.ts (1329 lines — blockagesAdd/blockagesResolve/blockagesDelete/blockagesList + auto-resolution in update + impact score in list), cli/commands/blockages.ts (107 lines — add/resolve/delete/list actions), cli/runner.ts (164 lines — blockages subcommand registration)]
     description: "Blockage & dependency system — bidirectional dependency maps (blockedBy/blocks), cycle detection (BFS walk), batch atomicity, auto-resolution on done/closed, impact score for list sorting, CLI blockages subcommands (add/resolve/delete/list)."
   phase_7_cli_refinement:
-    status: next
+    status: in-progress
+    modules: [tracker.ts (1734 lines — next method), cli/commands/next.ts (22 lines), cli/runner.ts (171 lines — next subcommand registration)]
+    description: "`next <user-name>` command — suggests the best next issue for a user. Filters to open statuses (idea/todo/in-progress), excludes actively blocked issues, sorts by priority ASC → impact score DESC → id ASC. Returns NO_ISSUES_AVAILABLE when no match. Case-sensitive assignee matching."
+    validation:
+      total_new_tests: 20
+      unit_tests: 14
+      cli_tests: 6
+      test_scenarios:
+        - "Basic case: returns highest-priority unblocked issue for user"
+        - "Blocked exclusion: issues with active blockages skipped, next best returned"
+        - "Impact tiebreak: when priorities equal, issue blocking others wins"
+        - "NO_ISSUES_AVAILABLE: returned when no open issues match user or all are blocked"
+        - "Done/closed exclusion: only idea/todo/in-progress statuses eligible"
+        - "Resolved blockages: issues with only resolved blockages are treated as unblocked"
+        - "Case-sensitive matching: 'alice' and 'Alice' match different issues"
+        - "Full ComputedIssue: returns all fields (id, title, description, assignee, priority, tags, status, timestamps)"
+        - "NOT_INITIALIZED: throws when no .trackgentic/ directory exists"
+        - "Cross-user isolation: only considers issues assigned to the specified user"
+        - "ID tiebreak: when priority and impact equal, lower id (older) wins"
 
 source_layout:
-  total_lines: 3466
+  total_lines: 3605
   types: [api.ts (134 lines), event.ts (107), index.ts (61), issue.ts (49), index-file.ts (30), user.ts (23), dependency.ts (28), config.ts (9)]
-  core: [tracker.ts (1329), dependency-manager.ts (181), index-manager.ts (202), hierarchy.ts (106), events.ts (155), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), id.ts (18)]
-  cli: [runner.ts (164), commands/blockages.ts (107), commands/comments.ts (102), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13)]
+  core: [tracker.ts (1734), dependency-manager.ts (181), index-manager.ts (202), hierarchy.ts (106), events.ts (155), auth.ts (69), file-io.ts (37), errors.ts (31), resolution.ts (27), id.ts (18)]
+  cli: [runner.ts (171), commands/blockages.ts (107), commands/comments.ts (102), commands/users.ts (97), commands/update.ts (63), commands/create.ts (51), commands/list.ts (43), commands/next.ts (22), commands/view.ts (22), commands/history.ts (22), commands/init.ts (24), output.ts (13)]
   public_api: "src/index.ts (62 lines) re-exports Tracker class, TrackgenticError, all type and response type aliases"
 
 test_layout:
-  total_tests: 528
-  total_expect_calls: 1793
-  total_files: 22
+  total_tests: 569
+  total_expect_calls: 1997
+  total_files: 25
   test_helpers: [helpers/setup.ts (19 lines — createTestDir, cleanupTestDir), helpers/fixtures.ts (24 lines — createIssueParams, updateIssueParams), helpers/assertions.ts (18 lines — expectError, expectOk)]
 
   directory_structure: |
@@ -63,7 +81,8 @@ test_layout:
     │   │   ├── tracker-hierarchy.test.ts   # parentId create, status constraints, reparent, cascade-close — 23 tests
     │   │   ├── tracker-blockages.test.ts   # blockages CRUD + batch + cycles + auto-resolve + impact + auth — 30 tests
     │   │   ├── tracker-auth.test.ts        # auth integration (open/read-only/strict + comments + hierarchy) — 19 tests
-    │   │   └── tracker-users.test.ts       # user management (register/list/revoke/regenerate) — 14 tests
+    │   │   ├── tracker-users.test.ts       # user management (register/list/revoke/regenerate) — 14 tests
+    │   │   └── tracker-next.test.ts        # next() — 14 tests
     │   ├── events/                 # Event engine — split by function
     │   │   ├── append-event.test.ts        # appendEvent fs operations — 3 tests
     │   │   ├── compute-state.test.ts       # computeState pure function — 10 tests
@@ -79,7 +98,7 @@ test_layout:
     │   ├── file-io.test.ts         # atomicWriteJSON, readJSON — 6 tests
     │   └── resolution.test.ts      # resolveTrackerDir — 4 tests
     ├── cli/                        # CLI integration tests (subprocess)
-    │   └── commands.test.ts        # All CLI commands — ~47 tests
+    │   └── commands.test.ts        # All CLI commands — ~53 tests (init, create, list, view, update, history, users, comments, blockages, next)
     └── integration/                # Placeholder for future integration tests (empty)
 
   file_naming_convention:
@@ -94,7 +113,7 @@ test_layout:
   split_organization:
     tracker_split:
       monolithic: "tracker.test.ts (2921 lines, 163 tests)"
-      split_total: "8 files, 3064 lines, 163 tests — same test count, organized by domain"
+      split_total: "9 files, 3320 lines, 177 tests — organized by domain"
       files:
         tracker-init: { tests: 6, lines: 126, describes: ["init()"] }
         tracker-crud: { tests: 38, lines: 542, describes: ["create()", "list()", "view()", "update()", "history()"] }
@@ -104,6 +123,7 @@ test_layout:
         tracker-blockages: { tests: 30, lines: 623, describes: ["blockages", "blockages auth integration"] }
         tracker-auth: { tests: 19, lines: 364, describes: ["auth integration", "comments auth integration", "auth + hierarchy integration"] }
         tracker-users: { tests: 14, lines: 206, describes: ["user management (usersRegister, usersList, usersRevoke, usersRegenerate)"] }
+        tracker-next: { tests: 14, lines: 256, describes: ["next() — suggest best issue for user"] }
     events_split:
       monolithic: "events.test.ts (543 lines, 23 tests)"
       split_total: "4 files, 575 lines, 23 tests — same test count, organized by function"
@@ -114,7 +134,7 @@ test_layout:
         replay-events: { tests: 2, lines: 54, describes: ["replayEvents"] }
 
   other_test_files:
-    cli_commands: { tests: ~47, lines: 884, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests, blockages add/resolve/delete/list] }
+    cli_commands: { tests: ~53, lines: 980, describes: [init, create, list, view, update, history, users register/list/revoke/regenerate, comments add/update/delete/list, comments error paths, --parentId flag tests, blockages add/resolve/delete/list, next (basic case, blocked exclusion, NO_ISSUES_AVAILABLE, NOT_INITIALIZED, done/closed exclusion, resolved blockages)] }
     core_dependency_manager: { tests: 19, lines: 206, describes: [addBlockage, resolveBlockage, deleteBlockage, getImpactScore, detectCycle] }
     core_index_manager: { tests: ~32, lines: 366, describes: [insertEntry, findEntry, updateEntry, removeEntry, parent/children index operations] }
     core_hierarchy: { tests: 29, lines: 304, describes: [isStatusAfter, validateNewChild, validateParentStatusChange, validateReparent, canCloseIssue] }
@@ -124,19 +144,19 @@ test_layout:
     core_resolution: { tests: 4, lines: 57, describes: [resolveTrackerDir] }
 
 current_coverage:
-  overall_line: 99.38%
-  overall_func: 99.83%
+  overall_line: 98.46%  # tracker.ts at 98.46%, all other core at 100%
+  overall_func: 100%
   per_file:
     auth: 100% / 100%
     dependency_manager: 100% / 100%
     errors: 100% / 100%
     events: 100% / 100%
-    file_io: 100% / 100%  # was 61.90% — error paths now tested
+    file_io: 100% / 100%
     hierarchy: 100% / 100%
     id: 100% / 100%
     index_manager: 100% / 100%
     resolution: 93.75% / 100%  # filesystem root walk-up path untested
-    tracker: 100% / 98.31%  # readDependenciesSync internal function — used only in sort comparator, likely an indirect gap
+    tracker: 98.46% / 100%  # next() adds coverage; small gap remains (likely next() edge paths)
 
 tooling:
   formatter: prettier (v3.5.3)
@@ -162,7 +182,7 @@ learnings:
   bun_coverage:
     - "Bun's coverageThreshold in bunfig.toml applies per-file, not just overall."
     - "coverageThreshold=0 means report coverage without failing on per-file thresholds."
-    - "Current coverage: 99.38% line, 99.83% function across all source files."
+    - "Current coverage: 98.46% line on tracker.ts (all other core at 100%), 100% function across all source files."
   typescript:
     - "4 extra strict flags (noUncheckedIndexedAccess, exactOptionalPropertyTypes, noImplicitOverride, noPropertyAccessFromIndexSignature) are enabled and pass clean."
     - "noPropertyAccessFromIndexSignature requires bracket notation for dynamic keys (e.g. process.env['TRACKGENTIC_USER_TOKEN'])."
@@ -213,3 +233,14 @@ learnings:
     - "Blockages auth integration section: 9 tests in tracker/tracker-blockages.test.ts covering read-only mode (TOKEN_REQUIRED for add/resolve/delete, OK for list), strict mode (TOKEN_REQUIRED for all including list), valid token (author from token in events), invalid token (INVALID_TOKEN)."
     - "CLI blockages section: 10 tests covering add (single + multiple + cycle error + NOT_FOUND), resolve, delete, list (happy path + empty arrays + NOT_FOUND)."
     - "Self-block test: detectCycle catches A blocked by A — the BFS starts at blockerId which equals blockedId, immediately returns true."
+  phase_7_next_command:
+    - "`next <user-name>` is a read-only suggestion command — no mutations, no events appended."
+    - "Filtering logic: only idea/todo/in-progress statuses eligible (done/closed excluded). Only issues assigned to the given user. Only issues with NO active blockages (resolved blockages are OK)."
+    - "Sort order: priority ASC → impact score DESC → id ASC (age). Same as list() sort but with the additional blocked-issues filter."
+    - "Returns NO_ISSUES_AVAILABLE (result code, not error) when no matching issues — exit code 0, not an error."
+    - "Case-sensitive assignee matching — 'alice' != 'Alice'. This is intentional."
+    - "14 unit tests in tracker/tracker-next.test.ts (256 lines): basic priority sort, blocked exclusion, impact tiebreak, NO_ISSUES_AVAILABLE (empty + all blocked + wrong user), NOT_INITIALIZED error, done/closed exclusion, resolved blockages, case-sensitive matching, full ComputedIssue fields, ID tiebreak, cross-user isolation, status eligibility (idea/todo/in-progress only)."
+    - "6 CLI tests in commands.test.ts: basic case, blocked exclusion, NO_ISSUES_AVAILABLE, NOT_INITIALIZED error, done/closed exclusion, resolved blockages treated as unblocked."
+    - "tracker.ts grew from 1329 to 1734 lines with the next() method addition."
+    - "cli/commands/next.ts is 22 lines — thin wrapper that calls tracker.next() and outputs JSON."
+    - "cli/runner.ts grew from 164 to 171 lines with next subcommand registration."

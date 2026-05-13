@@ -9,7 +9,7 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Dogfooding active. trackgentic is now the source of truth for all pending work. 7 issues created from status.yaml backlog. Test issue mp27msuvaj closed (dogfooding confirmed). Milestone: v0.1.0 release (mp3peanz8b) with 2 child prerequisites (NPM_TOKEN mp3peac1qo, GitHub Pages mp3peawcgs) assigned to javi. Code tasks: defensive index validation (mp3pe95w9e, P1), typedoc-plugin-markdown cleanup (mp3pe9lvdq, P2). Architecture decisions: concurrent writes (mp3pe96e9f, P3), CLAUDE.md (mp3pe9urb9, P4)."
+expertise_status: "Dogfooding active. New `next <user-name>` command implemented (issue mp3rc7femf, spec: .agentic/specs/next-command-spec.md). Returns highest-priority unblocked issue for a user as full ComputedIssue. Filters: assignee match, statuses idea/todo/in-progress, no active blockages. Sort: priority ASC → impact DESC → id ASC. 569 tests, 1997 assertions, 100% tracker.ts line coverage. Pending issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
 
 project_overview:
   name: trackgentic
@@ -54,6 +54,8 @@ specifications:
       description: Phase 6 specification — dependency-manager (bidirectional maps, cycle detection, batch atomicity, impact score), 4 Tracker blockage methods, auto-resolution on status change, CLI blockage commands, test plan
     - path: 08-phase7-polish-spec.md
       description: Phase 7 specification — JSDoc on all public API, error message polish, edge case & resilience testing, package configuration verification
+    - path: next-command-spec.md
+      description: "`next <user-name>` command — recommend highest-priority unblocked issue for a user. Returns ComputedIssue or NO_ISSUES_AVAILABLE. Filters by assignee, actionable statuses (idea/todo/in-progress), no active blockages. Sort: priority ASC → impact DESC → id ASC."
 
 access_boundaries:
   rule: "CTO must NOT read or modify files under packages/library/. All code changes go through subordinates."
@@ -207,3 +209,9 @@ session_log:
   - session: 39
     date: "2026-05-13"
     summary: "Organized all pending work from status.yaml into trackgentic issues. Closed test issue mp27msuvaj (dogfooding confirmed working). Created 7 issues: mp3pe95w9e (P1, defensive index validation), mp3pe9lvdq (P2, typedoc-plugin-markdown cleanup), mp3peanz8b (P2, v0.1.0 release milestone), mp3peac1qo (P2, NPM_TOKEN config — child of release), mp3peawcgs (P2, GitHub Pages config — child of release), mp3pe96e9f (P3, concurrent file access decision), mp3pe9urb9 (P4, CLAUDE.md decision). trackgentic is now the single source of truth for all pending work."
+  - session: 40
+    date: "2026-05-13"
+    summary: "User requested `next <user-name>` subcommand. Designed spec (.agentic/specs/next-command-spec.md): returns single best issue to work on for a given user. Filters open index to assignee match + actionable statuses (idea/todo/in-progress), excludes actively blocked issues, sorts by priority ASC → impact DESC → id ASC, returns full ComputedIssue or NO_ISSUES_AVAILABLE. Delegated to library-developer — implemented in 6 files (NextResult type, Tracker.next() method, CLI command handler, runner registration, type exports). Delegated to library-quality — validated spec compliance, added 20 tests (14 unit + 6 CLI). Final: 569 tests, 1997 assertions, 100% tracker.ts line coverage. Issue mp3rc7femf."
+  - session: 41
+    date: "2026-05-13"
+    summary: "Updated README.md with `next` command in both CLI quick start and programmatic API sections. No code changes — documentation only."

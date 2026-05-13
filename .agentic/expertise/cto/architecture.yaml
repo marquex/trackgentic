@@ -160,6 +160,7 @@ cli_interface:
     create: "new issue with title + flags (description, assignee, tags, status, priority, parentId, path)"
     update: "modify issue by id + flags (title, description, status, assignee, tags, priority, parentId)"
     list: "filter by status/assignee/tags/parentId from index (no issue file reads)"
+    next: "recommend highest-priority unblocked issue for a user (returns ComputedIssue or NO_ISSUES_AVAILABLE). Filters open index to assignee match + actionable statuses (idea/todo/in-progress), excludes actively blocked issues, sorts by priority ASC → impact DESC → id ASC"
     view: "computed state of single issue (replay events)"
     history: "raw event log of single issue"
     comments_add: "append comment event to issue"
@@ -188,3 +189,4 @@ error_codes:
   issue: [NOT_FOUND, ISSUE_MISSING]
   comment: [COMMENT_NOT_FOUND]
   auth: [USER_ALREADY_EXISTS, USER_NOT_FOUND]
+  next: [NO_ISSUES_AVAILABLE]

@@ -881,4 +881,100 @@ describe("CLI commands", () => {
       expect(result.result).toBe("NOT_FOUND");
     });
   });
+
+  // ─── Next CLI Tests ────────────────────────────────────────────────
+
+  describe("next", () => {
+    test("returns the best issue for a user", async () => {
+      await runCLI("init");
+      await runCLI("create", "Low Priority", "--assignee", "alice", "--priority", "5");
+      await runCLI("create", "High Priority", "--assignee", "alice", "--priority", "1");
+      await runCLI("create", "Medium Priority", "--assignee", "alice", "--priority", "3");
+
+      const { stdout, stderr, exitCode } = await runCLI("next", "alice");
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toBe("");
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.title).toBe("High Priority");
+      expect(result.assignee).toBe("alice");
+      expect(result.priority).toBe(1);
+    });
+
+    test("excludes blocked issues", async () => {
+      await runCLI("init");
+
+      const blocked = JSON.parse(
+        (await runCLI("create", "Blocked", "--assignee", "alice", "--priority", "1")).stdout.trim(),
+      );
+      await runCLI("create", "Unblocked", "--assignee", "alice", "--priority", "3");
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      await runCLI("blockages", "add", blocked.id, "--by", blocker.id);
+
+      const { stdout, exitCode } = await runCLI("next", "alice");
+
+      expect(exitCode).toBe(0);
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.title).toBe("Unblocked");
+    });
+
+    test("returns NO_ISSUES_AVAILABLE when no matching issues", async () => {
+      await runCLI("init");
+      await runCLI("create", "Bob's Issue", "--assignee", "bob", "--priority", "1");
+
+      const { stdout, exitCode } = await runCLI("next", "alice");
+
+      expect(exitCode).toBe(0);
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.result).toBe("NO_ISSUES_AVAILABLE");
+      expect(result.message).toContain("alice");
+    });
+
+    test("prints NOT_INITIALIZED error when no .trackgentic/ exists", async () => {
+      const { stderr, exitCode } = await runCLI("next", "alice");
+
+      expect(exitCode).toBe(1);
+
+      const result = JSON.parse(stderr.trim());
+      expect(result.result).toBe("NOT_INITIALIZED");
+    });
+
+    test("excludes done and closed issues", async () => {
+      await runCLI("init");
+      await runCLI("create", "Done Issue", "--assignee", "alice", "--status", "done");
+      await runCLI("create", "Closed Issue", "--assignee", "alice", "--status", "closed");
+      await runCLI("create", "Todo Issue", "--assignee", "alice", "--status", "todo", "--priority", "3");
+
+      const { stdout, exitCode } = await runCLI("next", "alice");
+
+      expect(exitCode).toBe(0);
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.title).toBe("Todo Issue");
+    });
+
+    test("resolved blockage treated as unblocked", async () => {
+      await runCLI("init");
+
+      const issue = JSON.parse(
+        (await runCLI("create", "Previously Blocked", "--assignee", "alice", "--priority", "1"))
+          .stdout.trim(),
+      );
+      const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
+
+      await runCLI("blockages", "add", issue.id, "--by", blocker.id);
+      await runCLI("blockages", "resolve", issue.id, "--by", blocker.id);
+
+      const { stdout, exitCode } = await runCLI("next", "alice");
+
+      expect(exitCode).toBe(0);
+
+      const result = JSON.parse(stdout.trim());
+      expect(result.title).toBe("Previously Blocked");
+    });
+  });
 });

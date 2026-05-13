@@ -37,6 +37,9 @@ npx trackgentic create "Fix login bug" --priority 2 --tags bug,auth
 # List open issues
 npx trackgentic list
 
+# Get the recommended next issue to work on for a user
+npx trackgentic next alice
+
 # View an issue
 npx trackgentic view <issueId>
 
@@ -107,6 +110,10 @@ const { id } = await tracker.create({
 
 // List issues
 const issues = await tracker.list({ status: "open" });
+
+// Get the recommended next issue to work on
+const nextIssue = await tracker.next("alice");
+// Returns the highest-priority, unblocked issue assigned to alice
 
 // View an issue with full computed state
 const issue = await tracker.view(id);

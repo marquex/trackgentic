@@ -52,6 +52,7 @@ export type {
   InitResult,
   ListParams,
   ListResult,
+  NextResult,
   UpdateParams,
   UpdateResult,
   UsersListResult,

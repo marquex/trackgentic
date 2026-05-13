@@ -15,6 +15,7 @@ import { createAction } from "./commands/create";
 import { historyAction } from "./commands/history";
 import { initAction } from "./commands/init";
 import { listAction } from "./commands/list";
+import { nextAction } from "./commands/next";
 import { updateAction } from "./commands/update";
 import {
   usersListAction,
@@ -66,6 +67,12 @@ export function createProgram(): Command {
     .option("--tags <comma-separated>", "Comma-separated tags (AND filter)")
     .option("--parentId <id>", 'Filter by parent ID (use "null" for top-level)')
     .action(listAction);
+
+  // ─── next ──────────────────────────────────────────────────────────
+  program
+    .command("next <userName>")
+    .description("Get the recommended next issue to work on for a user")
+    .action(nextAction);
 
   // ─── view ─────────────────────────────────────────────────────────
   program
