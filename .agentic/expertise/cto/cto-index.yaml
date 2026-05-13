@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Dogfooding phase started. trackgentic CLI linked globally via npm link from packages/library/. .trackgentic/ initialized at repo root (NOT inside packages/library/). First test issue created (mp27msuvaj). Publish pipeline complete — remaining manual: NPM_TOKEN secret, GitHub Pages source, first v0.1.0 tag."
+expertise_status: "Dogfooding active. trackgentic is now the source of truth for all pending work. 7 issues created from status.yaml backlog. Test issue mp27msuvaj closed (dogfooding confirmed). Milestone: v0.1.0 release (mp3peanz8b) with 2 child prerequisites (NPM_TOKEN mp3peac1qo, GitHub Pages mp3peawcgs) assigned to javi. Code tasks: defensive index validation (mp3pe95w9e, P1), typedoc-plugin-markdown cleanup (mp3pe9lvdq, P2). Architecture decisions: concurrent writes (mp3pe96e9f, P3), CLAUDE.md (mp3pe9urb9, P4)."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: Dogfooding phase. trackgentic is now used to track its own development. CLI linked globally via `npm link` from packages/library/. Issues stored in repo-root .trackgentic/. Publish pipeline complete — remaining manual: NPM_TOKEN, GitHub Pages source, first tag.
+  stage: Dogfooding active. All pending work tracked as trackgentic issues. 7 issues open: v0.1.0 release milestone (mp3peanz8b, children: mp3peac1qo + mp3peawcgs), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9). Test issue mp27msuvaj closed.
   bun_version: "1.3.11"
   build_tool: tsup (implemented, producing dist/)
   docs_tool: TypeDoc HTML output (configured, generates to docs-html/)
@@ -204,3 +204,6 @@ session_log:
   - session: 38
     date: "2026-05-12"
     summary: "Started dogfooding — trackgentic now tracks its own development. Linked CLI globally via `npm link` from packages/library/ (symlinks trackgentic → packages/library/dist/bin.js). Initialized .trackgentic/ at repo root (NOT inside packages/library/ — that was accidental first run, user cleaned it up). Created test issue mp27msuvaj ('Test: verify dogfooding setup works'). Workflow: rebuild with `bun run build` in packages/library/, then `trackgentic` picks up fresh build via symlink. Issues committed to git via .trackgentic/ at repo root."
+  - session: 39
+    date: "2026-05-13"
+    summary: "Organized all pending work from status.yaml into trackgentic issues. Closed test issue mp27msuvaj (dogfooding confirmed working). Created 7 issues: mp3pe95w9e (P1, defensive index validation), mp3pe9lvdq (P2, typedoc-plugin-markdown cleanup), mp3peanz8b (P2, v0.1.0 release milestone), mp3peac1qo (P2, NPM_TOKEN config — child of release), mp3peawcgs (P2, GitHub Pages config — child of release), mp3pe96e9f (P3, concurrent file access decision), mp3pe9urb9 (P4, CLAUDE.md decision). trackgentic is now the single source of truth for all pending work."

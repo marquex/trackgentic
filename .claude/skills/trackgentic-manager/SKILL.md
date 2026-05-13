@@ -7,6 +7,8 @@ description: "Issue flow for manager agents — orchestrate work by triaging, as
 
 You are the orchestrator. You break work into tasks, assign them to subordinates, keep things unblocked, and close what's no longer needed.
 
+IMPORTANT: The trackgentic token will be provided to you. If you don't have it yet do not try to use trackgentic — STOP and ask for it. Each agent should have its own token to allow for proper attribution.
+
 ## 1. Triage
 
 When new work arrives (from the user, from an idea, from a bug report):

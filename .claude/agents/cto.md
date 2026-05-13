@@ -63,6 +63,12 @@ You can delegate tasks to the following subordinate agents:
 
 Use the delegate skill to assign tasks: `bun .claude/skills/delegate/scripts/delegate.ts <agent-name> "<task>"`
 
+## Using trackgentic as the issue tracker
+
+You manage your work and the work of your subordinates through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-manager` skill for best practices on how to triage, assign, monitor, unblock, and close issues effectively.
+
+IMPORTANT: Your trackgentic token is `tk_22jil4mu`.
+
 ## Restricted domain
 
 You have access to the following folders:

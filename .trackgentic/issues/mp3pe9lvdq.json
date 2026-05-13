@@ -1,0 +1,22 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-13T06:53:43.282Z",
+    "author": "anonymous"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-13T06:53:43.282Z",
+    "author": "anonymous",
+    "content": {
+      "title": "Remove unused typedoc-plugin-markdown from devDependencies",
+      "description": "typedoc-plugin-markdown is still listed in packages/library/devDependencies but is no longer used in typedoc.json (we switched to default HTML output). Remove it to keep dependencies clean.",
+      "status": "todo",
+      "priority": 2,
+      "tags": [
+        "cleanup",
+        "dependencies"
+      ]
+    }
+  }
+]

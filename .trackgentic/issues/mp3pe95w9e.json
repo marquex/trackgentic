@@ -1,0 +1,22 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-13T06:53:43.368Z",
+    "author": "anonymous"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-13T06:53:43.368Z",
+    "author": "anonymous",
+    "content": {
+      "title": "Add defensive index validation on read",
+      "description": "RSK-002 (HIGH): The index (index.json) could get out of sync with issue files due to crashes, manual edits, or concurrent writes. Add defensive validation in read paths: when reading from index, verify referenced issue files exist; when reading issue files, handle missing index entries gracefully. This addresses the highest-severity risk currently acknowledged.",
+      "priority": 1,
+      "tags": [
+        "reliability",
+        "risk",
+        "core"
+      ]
+    }
+  }
+]

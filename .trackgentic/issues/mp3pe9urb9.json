@@ -1,0 +1,22 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-13T06:53:43.538Z",
+    "author": "anonymous"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-13T06:53:43.538Z",
+    "author": "anonymous",
+    "content": {
+      "title": "Resolve OQ-004: Add CLAUDE.md at project root",
+      "description": "Open question: Should we add a CLAUDE.md at the project root? This would help onboard new agents and provide context about the project structure, conventions, and workflows. Could include: project overview, key directories, build commands, testing approach, agent roles. Decide whether to create it and what content to include.",
+      "priority": 4,
+      "tags": [
+        "documentation",
+        "decision",
+        "dx"
+      ]
+    }
+  }
+]

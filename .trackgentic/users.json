@@ -1,3 +1,19 @@
 {
-  "users": []
+  "users": [
+    {
+      "name": "cto",
+      "token": "tk_22jil4mu",
+      "registeredAt": "2026-05-13T06:39:50.045Z"
+    },
+    {
+      "name": "library-developer",
+      "token": "tk_3vdu1mgu",
+      "registeredAt": "2026-05-13T06:42:12.570Z"
+    },
+    {
+      "name": "library-quality",
+      "token": "tk_cmaub6ek",
+      "registeredAt": "2026-05-13T07:00:37.317Z"
+    }
+  ]
 }

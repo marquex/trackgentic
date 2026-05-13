@@ -7,6 +7,8 @@ description: "Issue flow for subordinate agents — pick up assigned tasks, exec
 
 You are a worker. You pick up assigned tasks, execute them, and hand them back to the manager when ready or blocked.
 
+IMPORTANT: The trackgentic token will be provided to you. If you don't have it yet do not try to use trackgentic — STOP and ask for it. Each agent should have its own token to allow for proper attribution.
+
 ## 1. Pick Up Work
 
 You might receive a specific issue ID to work on, or you might need to fetch your assigned open issues and pick one. Always check the issue details before starting.

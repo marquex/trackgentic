@@ -7,7 +7,16 @@ current_state:
     status: active
     setup: "CLI linked globally via npm link from packages/library/. Issues stored in .trackgentic/ at repo root."
     workflow: "After code changes, run `bun run build` in packages/library/. Then `trackgentic` uses the fresh build via symlink."
-    test_issue: mp27msuvaj ("Test: verify dogfooding setup works")
+    test_issue: mp27msuvaj ("Test: verify dogfooding setup works" — closed, confirmed working)
+    issue_tracker: "All pending work now tracked as trackgentic issues. See `trackgentic list` for current backlog."
+    open_issues:
+      mp3pe95w9e: "P1 — Add defensive index validation on read (addresses RSK-002)"
+      mp3pe9lvdq: "P2 — Remove unused typedoc-plugin-markdown from devDependencies"
+      mp3peanz8b: "P2 — Cut first v0.1.0 release (milestone, assigned: javi)"
+      mp3peac1qo: "P2 — Configure NPM_TOKEN GitHub secret (child of mp3peanz8b, assigned: javi)"
+      mp3peawcgs: "P2 — Configure GitHub Pages source (child of mp3peanz8b, assigned: javi)"
+      mp3pe96e9f: "P3 — Resolve OQ-003: Concurrent file access strategy"
+      mp3pe9urb9: "P4 — Resolve OQ-004: Add CLAUDE.md at project root"
   source_code: All 7 phases implemented (event engine, CRUD, auth, comments, hierarchy, blockages, polish & hardening)
   monorepo_files:
     - package.json (root workspace config)
@@ -190,10 +199,11 @@ current_state:
       release_workflow: complete — .github/workflows/release.yml (npm publish + docs deploy on v* tag)
       gitignore_update: complete — docs-html/ added
     remaining:
-      - "User sets NPM_TOKEN secret in GitHub repo Settings → Secrets → Actions"
-      - "User sets GitHub Pages source to 'GitHub Actions' in repo Settings → Pages"
-      - "First release: cd packages/library && npm version 0.1.0 && git push --follow-tags"
-      - "Optional: remove unused typedoc-plugin-markdown from devDependencies"
+      - "All tracked as trackgentic issues — see `trackgentic list` and open_issues above"
+      - "NPM_TOKEN secret: issue mp3peac1qo"
+      - "GitHub Pages source: issue mp3peawcgs"
+      - "First release v0.1.0: issue mp3peanz8b"
+      - "typedoc-plugin-markdown cleanup: issue mp3pe9lvdq"
 
 implementation_roadmap:
   source: .agentic/specs/05-implementation-phases.md

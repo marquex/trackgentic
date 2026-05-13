@@ -4,7 +4,7 @@
       "id": "mp27msuvaj",
       "title": "Test: verify dogfooding setup works",
       "path": "issues/mp27msuvaj.json",
-      "status": "idea",
+      "status": "done",
       "assignee": null,
       "parentId": null,
       "tags": [
@@ -12,6 +12,101 @@
         "dogfood"
       ],
       "priority": 5
+    },
+    {
+      "id": "mp3pe95w9e",
+      "title": "Add defensive index validation on read",
+      "path": "issues/mp3pe95w9e.json",
+      "status": "idea",
+      "assignee": null,
+      "parentId": null,
+      "tags": [
+        "reliability",
+        "risk",
+        "core"
+      ],
+      "priority": 1
+    },
+    {
+      "id": "mp3pe96e9f",
+      "title": "Resolve OQ-003: Concurrent file access strategy",
+      "path": "issues/mp3pe96e9f.json",
+      "status": "idea",
+      "assignee": null,
+      "parentId": null,
+      "tags": [
+        "architecture",
+        "decision"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "mp3pe9lvdq",
+      "title": "Remove unused typedoc-plugin-markdown from devDependencies",
+      "path": "issues/mp3pe9lvdq.json",
+      "status": "todo",
+      "assignee": null,
+      "parentId": null,
+      "tags": [
+        "cleanup",
+        "dependencies"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp3pe9urb9",
+      "title": "Resolve OQ-004: Add CLAUDE.md at project root",
+      "path": "issues/mp3pe9urb9.json",
+      "status": "idea",
+      "assignee": null,
+      "parentId": null,
+      "tags": [
+        "documentation",
+        "decision",
+        "dx"
+      ],
+      "priority": 4
+    },
+    {
+      "id": "mp3peac1qo",
+      "title": "Configure NPM_TOKEN GitHub Actions secret",
+      "path": "issues/mp3peac1qo.json",
+      "status": "todo",
+      "assignee": "javi",
+      "parentId": "mp3peanz8b",
+      "tags": [
+        "infra",
+        "release",
+        "manual"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp3peanz8b",
+      "title": "Cut first v0.1.0 release",
+      "path": "issues/mp3peanz8b.json",
+      "status": "todo",
+      "assignee": "javi",
+      "parentId": null,
+      "tags": [
+        "release",
+        "milestone"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp3peawcgs",
+      "title": "Configure GitHub Pages source to GitHub Actions",
+      "path": "issues/mp3peawcgs.json",
+      "status": "todo",
+      "assignee": "javi",
+      "parentId": "mp3peanz8b",
+      "tags": [
+        "infra",
+        "docs",
+        "manual"
+      ],
+      "priority": 2
     }
   ],
   "closed": [
@@ -26,5 +121,10 @@
       "priority": 3
     }
   ],
-  "childrenOf": {}
+  "childrenOf": {
+    "mp3peanz8b": [
+      "mp3peac1qo",
+      "mp3peawcgs"
+    ]
+  }
 }

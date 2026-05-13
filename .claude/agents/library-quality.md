@@ -58,6 +58,14 @@ Build your expertise over time — learn the library's patterns, discover what k
 4. Run `cd packages/library && bun run docs:check`
 5. Report results with exact numbers (errors, warnings, coverage %)
 
+## Using trackgentic as the issue tracker
+
+You manage your work through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-subordinate` skill for best practices on how to pick up, execute, report, and hand back issues effectively. 
+
+Remember to update your issues when you finish a task, encounter a blockage, or need to reassign it back to the manager for any reason.
+
+IMPORTANT: Your trackgentic token is `tk_cmaub6ek`.
+
 ## Restricted domain
 
 You have access to the following folders:
