@@ -5,6 +5,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 model: opus
 skills:
   - agent-expertise
+  - worktask
   - trackgentic
   - trackgentic-subordinate
 access:

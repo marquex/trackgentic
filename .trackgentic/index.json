@@ -112,7 +112,7 @@
       "id": "mp3rc7femf",
       "title": "Add  subcommand — recommend highest-priority unblocked issue for a user",
       "path": "issues/mp3rc7femf.json",
-      "status": "todo",
+      "status": "in-progress",
       "assignee": "library-developer",
       "parentId": null,
       "tags": [
@@ -120,6 +120,16 @@
         "cli",
         "core"
       ],
+      "priority": 1
+    },
+    {
+      "id": "mp5r0cd19j",
+      "title": "Test task",
+      "path": "issues/mp5r0cd19j.json",
+      "status": "todo",
+      "assignee": "cto",
+      "parentId": null,
+      "tags": [],
       "priority": 1
     }
   ],

@@ -19,5 +19,13 @@
         "core"
       ]
     }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-14T17:15:29.060Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
   }
 ]

@@ -5,12 +5,9 @@ tools: Read, Write, Edit, MultiEdit, Glob, Grep, Bash
 model: opus
 skills:
   - agent-expertise
-  - delegate
+  - worktask
   - trackgentic
   - trackgentic-manager
-subordinates:
-  - library-developer
-  - library-quality
 access:
   - path: .agentic/expertise/cto/**
     permissions: [read, write, delete]
@@ -55,13 +52,14 @@ You are a top-level agent with no manager. You report directly to the user.
 
 Build your expertise over time — learn what works, what doesn't, and refine your approach to architecture and specification writing as the project evolves.
 
-## Delegation
+## Coordinating Work
 
-You can delegate tasks to the following subordinate agents:
+You no longer delegate tasks directly to other agents. Instead, create trackgentic issues and assign them to the appropriate agent. The agent runner will automatically pick up the issues and launch the agents.
 
-<!-- SUBORDINATES -->
-
-Use the delegate skill to assign tasks: `bun .claude/skills/delegate/scripts/delegate.ts <agent-name> "<task>"`
+To assign work to an agent, create an issue assigned to them:
+```bash
+TRACKGENTIC_TOKEN="$TOKEN" trackgentic create "Task description" --assignee <agent-name> --status todo --priority 2
+```
 
 ## Using trackgentic as the issue tracker
 
