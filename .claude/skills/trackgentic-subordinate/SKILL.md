@@ -7,7 +7,7 @@ description: "Issue flow for subordinate agents — pick up assigned tasks, exec
 
 You are a worker. You pick up assigned tasks, execute them, and hand them back to the manager when ready or blocked.
 
-IMPORTANT: The trackgentic token will be provided to you. If you don't have it yet do not try to use trackgentic — STOP and ask for it. Each agent should have its own token to allow for proper attribution.
+Your trackgentic token is injected automatically by the `enforce-trackgentic-token` hook — just call `trackgentic` commands directly without any token prefix. If the command is blocked, you are not registered as a trackgentic user — ask the user to register you.
 
 ## 1. Pick Up Work
 
@@ -16,15 +16,15 @@ You might receive a specific issue ID to work on, or you might need to fetch you
 If you don't get an issue ID, fetch your assigned, open issues:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic list --assignee "<your-name>" --status open
+trackgentic list --assignee "<your-name>" --status open
 ```
 
 Pick the highest-priority issue that is not blocked. Before starting, read the full context:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic view <issueId>
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments list <issueId>
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages list <issueId>
+trackgentic view <issueId>
+trackgentic comments list <issueId>
+trackgentic blockages list <issueId>
 ```
 
 Check before proceeding:
@@ -38,7 +38,7 @@ If the issue is in `idea` status:
 - Do **not** make code changes.
 - Add a comment with your analysis, proposed approach, trade-offs, and any questions:
   ```bash
-  TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> \
+  trackgentic comments add <issueId> \
     --content "<your analysis and proposed approach>"
   ```
 - Wait for the manager to review and promote it to `todo`.
@@ -46,7 +46,7 @@ If the issue is in `idea` status:
 If the issue is in `todo` status:
 - Move it to `in-progress`:
   ```bash
-  TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> --status "in-progress"
+  trackgentic update <issueId> --status "in-progress"
   ```
 - Begin implementation.
 
@@ -55,7 +55,7 @@ If the issue is in `todo` status:
 Add comments for anything non-trivial that happens during work — decisions, discoveries, partial progress:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> \
+trackgentic comments add <issueId> \
   --content "<update on what you found, decided, or changed>"
 ```
 
@@ -64,12 +64,12 @@ If you discover the task is blocked by another issue that is not tracked:
 1. Create or identify the blocking issue. If you need to create it, provide as much context as possible in the title and description to help the manager understand and assign it to the manager.
 2. Add the blockage:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages add <yourIssueId> --by <blockerId>
+   trackgentic blockages add <yourIssueId> --by <blockerId>
    ```
 3. Comment explaining the blocker and what needs to happen to unblock you.
 4. Move your issue back to `todo` so the manager knows you're waiting:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> --status "todo"
+   trackgentic update <issueId> --status "todo"
    ```
 
 ## 4. Finish Work
@@ -78,13 +78,13 @@ When you've completed the task, hand it back to the manager:
 
 1. Move the issue to `todo` and assign it to the manager:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> \
+   trackgentic update <issueId> \
      --status "todo" \
      --assignee "<manager-name>"
    ```
 2. Add a completion comment summarizing what was done, how it was tested, and anything the reviewer should know:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> \
+   trackgentic comments add <issueId> \
      --content "Done. <summary of changes, testing notes, caveats>"
    ```
 
@@ -94,16 +94,16 @@ If you can't finish the task (out of scope, too complex, blocked, or ran into an
 
 1. Add a comment describing what you accomplished, where you got stuck, and what remains:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> \
+   trackgentic comments add <issueId> \
      --content "<partial progress, blocker details, remaining work>"
    ```
 2. Move the issue back to `todo`:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> --status "todo"
+   trackgentic update <issueId> --status "todo"
    ```
 3. Reassign the ticket to the manager to take a decision:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> --assignee "<manager-name>"
+   trackgentic update <issueId> --assignee "<manager-name>"
    ```
 
 ## 6. Handle Feedback
@@ -112,7 +112,7 @@ If the manager assigns an issue back to you in `todo` status with feedback comme
 
 1. Read the new comments to understand what needs to change:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments list <issueId>
+   trackgentic comments list <issueId>
    ```
 2. Address the feedback.
 3. When done, hand it back the same way (repeat step 4).

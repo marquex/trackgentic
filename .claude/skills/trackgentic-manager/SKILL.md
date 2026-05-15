@@ -7,7 +7,7 @@ description: "Issue flow for manager agents — orchestrate work by triaging, as
 
 You are the orchestrator. You break work into tasks, assign them to subordinates, keep things unblocked, and close what's no longer needed.
 
-IMPORTANT: The trackgentic token will be provided to you. If you don't have it yet do not try to use trackgentic — STOP and ask for it. Each agent should have its own token to allow for proper attribution.
+Your trackgentic token is injected automatically by the `enforce-trackgentic-token` hook — just call `trackgentic` commands directly without any token prefix. If the command is blocked, you are not registered as a trackgentic user — ask the user to register you.
 
 ## 1. Triage
 
@@ -15,7 +15,7 @@ When new work arrives (from the user, from an idea, from a bug report):
 
 1. Create an issue for the work:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic create "<title>" \
+   trackgentic create "<title>" \
      --description "<what needs to happen and why>" \
      --status "idea" \
      --priority <1-5> \
@@ -28,25 +28,25 @@ When new work arrives (from the user, from an idea, from a bug report):
 Before assigning, check who is available and what they already have:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic list --status open
+trackgentic list --status open
 ```
 
 Then for each task ready for work:
 
 1. Update the issue status to `todo` and assign it:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> \
+   trackgentic update <issueId> \
      --status "todo" \
      --assignee "<agent-name>"
    ```
 2. Add a comment with any context the subordinate needs — goals, constraints, linked issues, acceptance criteria:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> \
+   trackgentic comments add <issueId> \
      --content "<context and instructions>"
    ```
 3. If the task depends on other issues, set blockages:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages add <issueId> --by <blockerId1> <blockerId2>
+   trackgentic blockages add <issueId> --by <blockerId1> <blockerId2>
    ```
 
 ## 3. Monitor
@@ -54,7 +54,7 @@ Then for each task ready for work:
 Periodically review the state of all open issues:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic list --status open
+trackgentic list --status open
 ```
 
 Issues are hierarchical, so if you start with a high-level issue and drill down into its children, you can get a full picture of the work and how it's progressing. Make a mental model of the open work.
@@ -62,9 +62,9 @@ Issues are hierarchical, so if you start with a high-level issue and drill down 
 For each issue, check its details and comments:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic view <issueId>
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments list <issueId>
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages list <issueId>
+trackgentic view <issueId>
+trackgentic comments list <issueId>
+trackgentic blockages list <issueId>
 ```
 
 Look for:
@@ -78,20 +78,20 @@ When an issue is blocked:
 
 1. Check what's blocking it:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages list <blockedId>
+   trackgentic blockages list <blockedId>
    ```
 2. For each blocker, view its status:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic view <blockerId>
+   trackgentic view <blockerId>
    ```
 3. Resolve the blocker by:
    - Assinging the blocker task to someone who can fix it
      ```bash
-       TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <blockerId> --assignee "<agent-name>" --status "todo"
+       trackgentic update <blockerId> --assignee "<agent-name>" --status "todo"
      ```
    - Removing the blockage if it's no longer relevant:
      ```bash
-     TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages resolve <blockedId> --by <blockerId>
+     trackgentic blockages resolve <blockedId> --by <blockerId>
      ```
    - Commenting on the blocked issue to explain what's happening and when it can proceed
 
@@ -101,35 +101,35 @@ When a subordinate hands back an issue (status `todo`, assigned to you or unassi
 
 1. View the issue and its comments to understand what was done:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic view <issueId>
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments list <issueId>
+   trackgentic view <issueId>
+   trackgentic comments list <issueId>
    ```
 2. Decide who should review:
    - **Review yourself** — if you can verify the work directly, proceed to step 3.
    - **Delegate review** — assign to another agent for review:
      ```bash
-     TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> \
+     trackgentic update <issueId> \
        --assignee "<reviewer-agent>" \
        --status "todo"
-     TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> \
+     trackgentic comments add <issueId> \
        --content "Please review the work done by <worker-agent>. Focus on <specific areas>."
      ```
      The reviewer will comment with their findings and hand it back to you the same way.
 3. If the work is satisfactory:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> --status "done"
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> --content "Approved. <brief note on what was delivered>"
+   trackgentic update <issueId> --status "done"
+   trackgentic comments add <issueId> --content "Approved. <brief note on what was delivered>"
    ```
    Then resolve any blockages this issue was causing:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages resolve <waitingId> --by <thisIssueId>
+   trackgentic blockages resolve <waitingId> --by <thisIssueId>
    ```
 4. If the work needs changes, assign back (to the same or a different agent) with feedback:
    ```bash
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> \
+   trackgentic update <issueId> \
      --assignee "<agent-name>" \
      --status "todo"
-   TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> --content "<what needs to change and why>"
+   trackgentic comments add <issueId> --content "<what needs to change and why>"
    ```
 
 ## 6. Cleanup
@@ -137,8 +137,8 @@ When a subordinate hands back an issue (status `todo`, assigned to you or unassi
 Close issues that are no longer needed:
 
 ```bash
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic update <issueId> --status "closed"
-TRACKGENTIC_TOKEN="$TOKEN" trackgentic comments add <issueId> --content "<why it was closed>"
+trackgentic update <issueId> --status "closed"
+trackgentic comments add <issueId> --content "<why it was closed>"
 ```
 
 Resolve any blockages this issue was causing before closing it.

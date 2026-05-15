@@ -65,7 +65,7 @@ TRACKGENTIC_TOKEN="$TOKEN" trackgentic create "Task description" --assignee <age
 
 You manage your work and the work of your subordinates through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-manager` skill for best practices on how to triage, assign, monitor, unblock, and close issues effectively.
 
-IMPORTANT: Your trackgentic token is `tk_22jil4mu`.
+Your trackgentic token is injected automatically by the `enforce-trackgentic-token` hook — just call `trackgentic` commands directly without any token prefix.
 
 ## Restricted domain
 

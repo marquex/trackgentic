@@ -21,10 +21,10 @@ At the end of the session, the agent should update their expertise with any new 
 
 ### Agent Hierarchy
 
-Agents are organized in a delegation hierarchy. Delegation always flows downward — from a manager to its subordinates. This creates a tree structure with no circular dependencies.
+Agents are organized in a manager-subordinate hierarchy. Work flows through trackgentic issues — managers create and assign issues, subordinates pick them up and work on them.
 
-- Every agent can have a **manager** (an agent that delegates to it). Documented in the system prompt.
-- Every agent can have **subordinates** (agents it delegates to). Declared in the `subordinates` frontmatter field and documented in the system prompt.
+- Every agent can have a **manager** (an agent that assigns work to it via trackgentic issues). Documented in the system prompt.
+- Every agent can have **subordinates** (agents it can assign work to via trackgentic issues). Declared in the `subordinates` frontmatter field.
 - An agent at the top has no manager. A leaf agent has no subordinates.
 - The hierarchy can have many levels.
 
@@ -41,7 +41,10 @@ description: A brief description of the expert agent's domain, purpose and when 
 tools: Read, Grep, Glob
 skills:
   - agent-expertise
-subordinates: []  # list of agent names this agent can delegate to (omit if none)
+  - worktask
+  - trackgentic
+  - trackgentic-subordinate
+subordinates: []  # list of agent names this agent can assign work to (omit if none)
 access:
   - path: .agentic/expertise/expert-agent/**
     permissions: [read, write, delete]
@@ -53,23 +56,42 @@ hooks:
       hooks:
         - type: command
           command: "bun .claude/hooks/enforce-agent-access.ts"
+  SessionStart:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
+  UserPromptSubmit:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
+  Stop:
+    - hooks:
+        - type: command
+          command: "bun .claude/skills/agent-expertise/expertise.hook.ts"
 ---
 
 [System prompt for the expert agent, its purposes and goals. It shouldn't include specific instructions, instead it needs to set the agent direction and the agent should learn how to achieve that goal by itself. Remark that the agent should build expertise on every session]
 
-{If this agent has subordinates, include a Delegation section:}
+{If this agent has subordinates, include a Coordinating Work section:}
 
-## Delegation
+## Coordinating Work
 
-You can delegate tasks to the following subordinate agents:
+You coordinate work by creating trackgentic issues and assigning them to your subordinate agents. The agent runner will automatically pick up the issues and launch the agents.
 
-<!-- SUBORDINATES -->
-
-Use the delegate skill: `bun .claude/skills/delegate/scripts/delegate.ts <agent-name> "<task>"`
+To assign work to a subordinate:
+```bash
+TRACKGENTIC_TOKEN="$TOKEN" trackgentic create "Task description" --assignee <agent-name> --status todo --priority 2
+```
 
 {If this agent has a manager, mention it:}
 
-Your manager is `manager-name` — you receive delegated tasks from it.
+Your manager is `manager-name` — you receive assigned tasks from it.
+
+## Using trackgentic as the issue tracker
+
+You manage your work through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-subordinate` skill for best practices on how to pick up, execute, report, and hand back issues effectively.
+
+IMPORTANT: Your trackgentic token is `<token-here>`.
 
 ## Restricted domain
 
@@ -82,20 +104,28 @@ This restriction is to keep you focused on your domain and avoid distractions. D
 ```
 
 The frontmatter of an expert agent has some specific content:
-- The `agent-expertise` skill teach the agent how to build expertise and how to use its long-term memory on every session.
-- The `delegate` skill is only included if the agent has subordinates (i.e., the `subordinates` list is non-empty).
-- The `subordinates` field is a list of agent names that this agent can delegate to. Omit if the agent is a leaf agent with no delegation capability.
+- The `agent-expertise` skill teaches the agent how to build expertise and how to use its long-term memory on every session.
+- The `worktask` skill teaches the agent how to pick up and work on trackgentic issues.
+- The `trackgentic` skill provides the CLI reference for the issue tracker.
+- The `trackgentic-subordinate` skill provides the issue flow for worker agents.
+- The `trackgentic-manager` skill is included if the agent has subordinates — it provides the issue flow for manager agents.
+- The `subordinates` field is a list of agent names that this agent can assign work to. Omit if the agent is a leaf agent.
 - The `access` section grants the agent permissions to read, write and delete files. It should include at least the path to the agent's expertise folder with read, write and delete permissions, and it can also include other paths with read permissions if needed.
-- The `hooks` section includes a PreToolUse hook that runs `enforce-agent-access.ts` before using any tool. This script enforces the access restrictions AND enforces the delegation hierarchy — it denies delegation commands (`delegate.ts`) that target agents not listed in the `subordinates` frontmatter field.
+- The `hooks` section includes a PreToolUse hook that runs `enforce-agent-access.ts` before using any tool. This script enforces the access restrictions.
 - The `<!-- ACCESS_RULES -->` placeholder in the system prompt is replaced by the PostToolUse hook `inject-agent-markers.ts` with the formatted list of access rules from the frontmatter. The replacement happens automatically when the agent file is written.
-- The `<!-- SUBORDINATES -->` placeholder (only for agents with subordinates) is replaced by the same PostToolUse hook with the formatted list of subordinate agents and their descriptions. The hook reads each subordinate's agent file to get the `description` field.
+
+### Project-wide hooks
+
+In addition to the agent-specific hooks in the frontmatter, two enforcement hooks are registered project-wide in `.claude/settings.json`:
+
+- **`enforce-trackgentic-token.ts`** (PreToolUse) — Verifies that agents use their own trackgentic token when calling the CLI. Prevents token impersonation between agents so issue changes are always attributed to the correct author.
+- **`enforce-issue-cleanup.ts`** (SubagentStop) — Prevents agents from stopping when they have unblocked issues in `todo` or `in-progress` status assigned to them. Forces agents to resolve their issues (mark done, reassign, or add blockages) before the session can end.
 
 
 ## Types of expert agents
 
-Every AI agent is better by turning it into an expert agent, but the ones that benefit the most of this approach are the ones that are not developers. AI agents tends to explore the code and try to update it when they need to perform a task, but a project-manager agent or a CEO agent doesn't need to even know the code, they just need to have clear goals and build expertise on how to achieve them and can delegate the tasks that require code access to other developer agents.
+Every AI agent is better by turning it into an expert agent, but the ones that benefit the most of this approach are the ones that are not developers. AI agents tends to explore the code and try to update it when they need to perform a task, but a project-manager agent or a CEO agent doesn't need to even know the code, they just need to have clear goals and build expertise on how to achieve them and can assign tasks to other developer agents through trackgentic issues.
 
 Said so, for developer agents, building expertise and restricting their access to a certain area, makes them specialists that work better and faster on that area.
 
 Ideally all agents that we create should be expert agents.
-

@@ -23,14 +23,14 @@ architecture:
         description: Chief Technology Officer — designs architecture, generates specs, tracks development alignment
         access: [.agentic/expertise/cto/**, ./**]
         subordinates: [library-developer, library-quality]
-        skills: [agent-expertise, delegate, trackgentic, trackgentic-manager]
+        skills: [agent-expertise, worktask, trackgentic, trackgentic-manager]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
       - name: library-developer
         model: opus
         description: TypeScript library developer — owns all technical details of the npm-published library
         access: [.agentic/expertise/library-developer/**, packages/library/**, .agentic/specs/**]
         subordinates: none
-        skills: [agent-expertise, trackgentic, trackgentic-subordinate]
+        skills: [agent-expertise, worktask, trackgentic, trackgentic-subordinate]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
       - name: library-quality
@@ -38,14 +38,14 @@ architecture:
         description: Library quality engineer — generates tests, verifies code quality, produces documentation for the library
         access: [.agentic/expertise/library-quality/**, packages/library/**, .agentic/specs/**]
         subordinates: none
-        skills: [agent-expertise, trackgentic, trackgentic-subordinate]
+        skills: [agent-expertise, worktask, trackgentic, trackgentic-subordinate]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
     notes: |
       hire-expert skill tested — workflow is: parse → ask → confirm → create → validate. Step-by-step approach works well.
       Second hire (library-developer) went smoothly — user provided complete info upfront, only changed model from sonnet to opus.
       Third hire (library-quality) — user again provided complete info upfront, changed model from sonnet to opus. This agent needs Write/Edit tools (creates test files and docs).
-      CTO now has two subordinates — adding the second was simple since delegate skill and Delegation section already existed, just needed subordinates list update in frontmatter.
+      CTO now has two subordinates — adding the second was simple since trackgentic-based task assignment and Coordinating Work section already existed, just needed subordinates list update in frontmatter.
 
   skills:
     path: .claude/skills/
@@ -62,23 +62,27 @@ architecture:
         scripts: [expertise.hook.ts, yaml-validator.ts]
         hooks_registered_in: agent frontmatter only (SessionStart, UserPromptSubmit, Stop)
         injection_flow: SessionStart is primary injection point; UserPromptSubmit is fallback (skips if SessionStart already injected via flag check). Flag-based dedup handles double-firing gracefully.
-        stop_flow: Stop hook in agent frontmatter fires reliably for all agent sessions including -p mode delegates. Handles both Stop and SubagentStop events.
+        stop_flow: Stop hook in agent frontmatter fires reliably for all agent sessions including -p mode. Handles both Stop and SubagentStop events.
       - name: hire-expert
         purpose: Create new expert agents with proper hierarchy, access rules, and expertise setup
         has_scripts: false
         notes: Template-based agent creation with hierarchy integration
-      - name: delegate
-        purpose: Delegate tasks to subordinate agents via claude CLI subprocess
-        has_scripts: true
-        scripts: [delegate.ts]
+      - name: worktask
+        purpose: Work on a trackgentic issue — retrieve details, manage status transitions, report progress
+        has_scripts: false
+        notes: |
+          Replaces the old delegate skill. Instead of direct delegation, agents now receive
+          trackgentic issue assignments and the agent runner picks them up automatically.
+          The issue ID is received as a parameter.
       - name: trackgentic
         purpose: Interact with the trackgentic issue tracker — create, list, view, update issues, comments, users, blockages
         has_scripts: false
-        auth_mechanism: TRACKGENTIC_TOKEN env var prepended to every command — each agent has its own token
+        auth_mechanism: Token read from TRACKGENTIC_USER_TOKEN env var and injected by enforce-trackgentic-token.ts hook — agents call trackgentic directly without token prefix
         notes: |
           Pure reference skill — no scripts, just CLI usage documentation.
           Each agent should be registered via `trackgentic users register <name>` to get their own token.
-          Tokens should be stored in the agent's expertise files for reuse across sessions.
+          The agent runner must set TRACKGENTIC_USER_TOKEN in the environment when launching an agent.
+          The PreToolUse hook reads the env var, strips any manual token from the command, and injects the correct one.
       - name: trackgentic-manager
         purpose: Issue flow for manager agents — triage, assign, monitor, unblock, review, close issues
         has_scripts: false
@@ -96,15 +100,33 @@ architecture:
     path: .claude/hooks/
     current_hooks:
       - name: enforce-agent-access.ts
-        trigger: PreToolUse (Read|Write|Edit|MultiEdit|Bash)
-        purpose: Enforce per-agent filesystem access from frontmatter + delegation hierarchy
+        trigger: PreToolUse (Read|Write|Edit|MultiEdit|Bash) — per-agent frontmatter
+        purpose: Enforce per-agent filesystem access from frontmatter
         key_behaviors:
           - Main agent (no agent_type) is always allowed
           - No access block in agent file = deny (fail closed)
-          - Validates delegation targets against subordinates list
           - Auto-allows agents reading their own agent file
           - Maps tools to verbs: Read/Grep/Glob=read, Write/Edit/MultiEdit/NotebookEdit=write
           - Bash commands classified by patterns (redirection, rm, cp, etc.)
+      - name: enforce-trackgentic-token.ts
+        trigger: PreToolUse (Bash(trackgentic *)) — project-wide in settings.json
+        purpose: Ensure agents have a trackgentic token before calling the CLI; inject it from env var
+        key_behaviors:
+          - Main agent (no agent_type) is always allowed without modification
+          - Reads token from TRACKGENTIC_USER_TOKEN environment variable
+          - If env var not set → deny (agent cannot use trackgentic)
+          - Strips any existing TRACKGENTIC_TOKEN or TRACKGENTIC_USER_TOKEN from the command
+          - Injects the env var token via updatedInput: TRACKGENTIC_USER_TOKEN="<token>" <command>
+          - Agents do NOT need to know their own tokens — the hook handles everything transparently
+      - name: enforce-issue-cleanup.ts
+        trigger: SubagentStop — project-wide in settings.json
+        purpose: Prevent agents from stopping with unblocked active issues assigned to them
+        key_behaviors:
+          - Lists open issues assigned to the agent via trackgentic
+          - Filters for todo/in-progress status
+          - Checks blockages for each active issue
+          - Blocks stop if any unblocked active issues remain
+          - Forces agent to resolve issues (mark done, reassign, or add blockages) before exiting
       - name: inject-agent-markers.ts
         trigger: PostToolUse (after Read)
         purpose: Expand <!-- ACCESS_RULES --> and <!-- SUBORDINATES --> markers in agent files at runtime
@@ -115,11 +137,13 @@ architecture:
   settings:
     path: .claude/settings.json
     hooks_configured:
+      PreToolUse: [enforce-trackgentic-token.ts (Bash(trackgentic *))]
+      SubagentStop: [enforce-issue-cleanup.ts]
       PostToolUse: [inject-agent-markers.ts]
     permissions:
       allow: [Bash(bun .claude/hooks/*), Bash(bun .claude/skills/**), Write/Edit/MultiEdit on .claude/**]
     env:
-      BASH_DEFAULT_TIMEOUT_MS: "600000"
+      BASH_DEFAULT_TIMEOUT_MS: "1800000"
       BASH_MAX_TIMEOUT_MS: "1800000"
 
   expertise_system:
@@ -136,14 +160,15 @@ conventions:
   - Agent frontmatter uses custom YAML parser (no yaml dependency) in enforce-agent-access
   - Agent marker expansion (ACCESS_RULES, SUBORDINATES) never modifies files on disk
   - Skills with scripts have a scripts/ folder
-  - Delegate script spawns `claude --agent <name> -p <prompt>` with stream-json output — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
-  - Delegate script has no session/logging — it only spawns the child process, shows progress, and returns the text response
-  - Stop hooks from settings.json don't reliably fire for `-p` mode agent sessions — all expertise hooks now defined in agent frontmatter only
+  - Task assignment uses trackgentic issues — managers create and assign issues, the agent runner picks them up and launches agents
+  - The agent runner uses `claude --agent <name> -p <prompt>` — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
+  - Project-wide enforcement hooks (token, issue cleanup) are in .claude/settings.json — they apply to all agents automatically
+  - Agent-specific hooks (access, expertise) are in each agent's frontmatter — they apply only to that agent
   - Internal subagents (Agent tool / @-mention) only run frontmatter hooks — settings.json hooks don't fire inside them
   - Avoid MCP — prefer CLI tools via skills
   - Only one CLAUDE.md at project root, used as project overview not agent memory
   - Expert agents always get agent-expertise skill and PreToolUse hook for access enforcement
-  - Agent hierarchy is a strict tree — delegation flows downward only
+  - Agent hierarchy is a strict tree — task assignment flows downward via trackgentic issues
 
 patterns:
   - hire-expert flow: parse user description → identify gaps → ask follow-ups → present summary → await explicit confirmation → create files → validate
@@ -151,17 +176,19 @@ patterns:
   - Agent creation is multi-step — always confirm before writing files, user may adjust access or hierarchy
   - Users often override the default model (sonnet) — always present model in confirmation summary so it's visible and adjustable
   - Second hire (library-developer) — user provided all info upfront in a single description; only change was model (sonnet → opus). When user gives complete info, skip directly to confirmation step.
-  - When adding first subordinate to a manager: add delegate skill, add subordinates list, add Delegation section with SUBORDINATES marker before Restricted domain section
-  - When adding subsequent subordinates to a manager that already has delegate skill and Delegation section: just add to subordinates list in frontmatter — no structural changes needed
+  - When adding first subordinate to a manager: add trackgentic-manager skill, add subordinates list, add Coordinating Work section before Restricted domain section
+  - When adding subsequent subordinates to a manager that already has trackgentic-manager skill and Coordinating Work section: just add to subordinates list in frontmatter — no structural changes needed
   - Agents that create files (tests, docs) need Write/Edit in their tools list — most expert agents are read-only but quality/doc agents are exceptions
   - Reference-only skills (no scripts): SKILL.md frontmatter just needs `name` and `description`, no `allowed-tools` or `argument-hint` needed. The body is purely instructional — teaches the agent how to use an external CLI tool, API, or convention. The trackgentic skill is the first example of this pattern.
   - Role-specific skill splitting: when a base skill has different workflows for different agent roles (e.g. manager vs subordinate), split each workflow into its own skill directory. The base skill holds the shared reference (CLI docs, auth, etc.) and each role skill holds the workflow instructions. Assign agents both the base skill and their role-specific skill. This keeps skill content focused and avoids agents loading irrelevant workflows.
+  - PreToolUse updatedInput is powerful for transparent command modification: the hook can modify tool_input (e.g. inject env vars into Bash commands) without the agent needing to know. Combined with permissionDecision: "allow", the tool call proceeds with the modified input seamlessly. This is better than requiring agents to manually include the right values.
+  - When moving from agent-managed tokens to hook-injected tokens: remove token from agent files (no more `IMPORTANT: Your token is...`), remove token prefix from skill examples, update the hook to use updatedInput instead of deny-on-mismatch. The skill docs should tell agents "just call trackgentic directly" instead of "prepend your token". The token is sourced from the TRACKGENTIC_USER_TOKEN env var (set by the agent runner), not from the users file on disk.
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
   - yaml-validator.ts takes a directory path (not a file path) — it recursively finds all YAML files in the given directory
-  - Expertise injection was only handled on UserPromptSubmit, not SessionStart — delegated subagents via delegate skill (claude -p) need SessionStart injection since that's the primary context injection point before the first prompt
-  - Expertise hooks (SessionStart, UserPromptSubmit, Stop) live in agent frontmatter, NOT settings.json — settings.json hooks don't reliably fire for -p mode delegates
+  - Expertise injection was only handled on UserPromptSubmit, not SessionStart — subagents via agent runner (claude -p) need SessionStart injection since that's the primary context injection point before the first prompt
+  - Expertise hooks (SessionStart, UserPromptSubmit, Stop) live in agent frontmatter, NOT settings.json — settings.json hooks don't reliably fire for -p mode subagents
   - hire-expert skill template includes all three expertise hooks in the frontmatter — new agents get them automatically
   - "TYPOS IN HOOK COMMANDS ARE SILENTLY FATAL — if a hook command references a non-existent file, bun fails with a non-zero exit code, producing a 'hook error' notification. The hook never executes. Since there's no compile-time checking on command strings, always double-check paths after editing agent frontmatter hook commands."
   - "stop-hook-error notification appears in --verbose stream-json output for ALL agents when their Stop hook returns decision: block — this is normal Claude Code behavior, not a bug. The hook works correctly (feedback is passed, agent continues), but the notification is always emitted."
@@ -170,6 +197,11 @@ gotchas:
   - "Skill docs for tools with mixed positional/flag args need extra clarity. Example: `trackgentic create` takes title as positional but `trackgentic update` uses `--title` as a flag. Agents will conflate these. Use concrete example commands and add explicit notes like 'title is positional, NOT a flag'."
   - "When a skill has duplicated/overlapping workflow sections (copy-paste drift), agents get confused by contradictory instructions. Consolidate into a single authoritative flow. The trackgentic skill had 3 overlapping versions of the workflow — merged into one clean sequence."
   - "Blockages `--by` is variadic (`--by id1 id2`) — when documenting variadic options, add an explicit note since agents may not infer this from `--by <id1> <id2> ...` syntax alone."
+  - "In settings.json, Stop and SubagentStop are separate events. In agent frontmatter, Stop is auto-converted to SubagentStop for subagents. Use SubagentStop in settings.json for hooks that should fire when subagents finish."
+  - "The `if` condition in settings.json hooks uses permission rule syntax: `Bash(trackgentic *)` matches after VAR=value stripping, so `TRACKGENTIC_TOKEN=... trackgentic list` correctly matches. Only evaluated for PreToolUse/PostToolUse/PostToolUseFailure/PermissionRequest/PermissionDenied events."
+  - "Token enforcement now reads from the TRACKGENTIC_USER_TOKEN environment variable — the enforce-trackgentic-token.ts hook checks process.env, denies if not set, and injects via updatedInput. The agent runner must set this env var when launching agents."
+  - "Hook placement strategy: project-wide enforcement hooks (token injection, issue cleanup) go in settings.json so they apply to all agents automatically without per-agent config. Agent-specific hooks (access control, expertise injection) stay in agent frontmatter since they need per-agent configuration. This avoids duplicating hook config across every agent file."
+  - "The enforce-issue-cleanup.ts SubagentStop hook uses both `reason` (shown to the agent) and `systemMessage` (shown to the user) in its block output. Both fields work for SubagentStop just like Stop."
 
 open_questions: []
 
@@ -178,8 +210,9 @@ resolved:
   - "RESOLVED: Specs location confirmed as .agentic/specs/ — used by library-developer for read access to project specifications"
   - "RESOLVED: Library code lives in packages/library/ — the library-developer agent has full read/write/delete access there"
   - "RESOLVED: Bash timeout configurable via env vars — BASH_DEFAULT_TIMEOUT_MS (default 2 min) and BASH_MAX_TIMEOUT_MS (default 10 min, the ceiling). Can be set via the `env` key in settings.json to apply to all sessions, or in shell profile before Claude Code starts. Project currently uses BASH_DEFAULT_TIMEOUT_MS=600000 (10 min) and BASH_MAX_TIMEOUT_MS=1800000 (30 min)."
-  - "FIXED: Expertise injection for delegated subagents — expertise.hook.ts now handles SessionStart event (primary injection point). Uses flag-based de-duplication: SessionStart writes flag + injects; UserPromptSubmit checks flag and skips if already injected. This ensures expertise is available from session start in both interactive and -p (delegated) modes."
-  - "FIXED: Stop hook not reliably firing for delegated agents — all expertise hooks (SessionStart, UserPromptSubmit, Stop) moved from settings.json to agent frontmatter. hire-expert template updated so new agents get hooks automatically."
+  - "FIXED: Expertise injection for subagents — expertise.hook.ts now handles SessionStart event (primary injection point). Uses flag-based de-duplication: SessionStart writes flag + injects; UserPromptSubmit checks flag and skips if already injected. This ensures expertise is available from session start in both interactive and -p modes."
+  - "FIXED: Stop hook not reliably firing for subagents — all expertise hooks (SessionStart, UserPromptSubmit, Stop) moved from settings.json to agent frontmatter. hire-expert template updated so new agents get hooks automatically."
   - "FIXED: library-quality agent Stop hook had typo in command path — expertence.hook.ts (missing 'i') → expertise.hook.ts. This caused the Stop hook to fail silently (bun couldn't find the file), so the agent never received expertise update reminders."
-  - "REMOVED: Session/logging infrastructure from delegate skill — no more _conversation.jsonl, agent_logs, CRYPLATIVE_SESSION_ID, or reference.md. Delegate script now only spawns the child process, tracks progress, and returns the text response."
+  - "REMOVED: Session/logging infrastructure from old delegate skill — no more _conversation.jsonl, agent_logs, CRYPLATIVE_SESSION_ID, or reference.md."
+  - "REMOVED: Direct delegation via delegate skill — replaced by trackgentic-based task assignment. Managers create issues and assign them; the agent runner picks up issues and launches agents. Project-wide hooks enforce token usage and issue cleanup."
   - "FIXED: trackgentic SKILL.md CLI syntax was out of sync with actual CLI — missing init command, missing users section, missing --path option on create, blockages --by variadic syntax unclear, and workflow guidelines had 3 overlapping contradictory versions. Verified all commands against `--help` output and rewrote to match. Also added explicit note that `create` takes title as positional arg (not --title flag) since agents were hitting errors using --title."

@@ -315,18 +315,6 @@ function classifyTool(toolName: string, toolInput: Record<string, unknown>): Too
   return { skip: true };
 }
 
-// ---------- delegation detection ----------
-
-/**
- * Detect if a Bash command is a delegation (calls delegate.ts) and extract
- * the target agent name.
- * Matches: bun .claude/skills/delegate/scripts/delegate.ts <agent-name> ...
- */
-function detectDelegation(cmd: string): { target: string } {
-  const match = cmd.match(/delegate\.ts\s+(\S+)/);
-  return { target: match?.[1] ?? '' };
-}
-
 // ---------- main ----------
 
 async function main(): Promise<never> {
@@ -355,31 +343,6 @@ async function main(): Promise<never> {
   }
   if (!policy || !Array.isArray(policy.access) || policy.access.length === 0) {
     return deny(`enforce-agent-access: agent '${agentType}' has no 'access' block`);
-  }
-
-  // --- Delegation enforcement ---
-  // Before checking file access rules, verify that delegation commands
-  // only target agents listed in the 'subordinates' frontmatter field.
-  if (toolName === 'Bash') {
-    const cmd = (toolInput.command as string | undefined) ?? '';
-    const delegation = detectDelegation(cmd);
-    if (delegation.target) {
-      if (!Array.isArray(policy.subordinates) || policy.subordinates.length === 0) {
-        return deny(
-          `enforce-delegation: agent '${agentType}' has no subordinates and cannot delegate to anyone. ` +
-          `Remove the delegate skill or add a 'subordinates' field to the agent's frontmatter.`
-        );
-      }
-      if (!policy.subordinates.includes(delegation.target)) {
-        return deny(
-          `enforce-delegation: agent '${agentType}' cannot delegate to '${delegation.target}' — ` +
-          `authorized subordinates: [${policy.subordinates.join(', ')}]`
-        );
-      }
-      return allow(
-        `enforce-delegation: agent '${agentType}' delegates to '${delegation.target}' (authorized subordinate)`
-      );
-    }
   }
 
   const cls = classifyTool(toolName, toolInput);

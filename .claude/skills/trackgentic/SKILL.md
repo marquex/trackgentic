@@ -9,13 +9,13 @@ Trackgentic is a file-backed, event-sourced, git-friendly issue tracker designed
 
 ## Authentication
 
-You must authenticate using your own token. Prepend the environment variable to every command:
+**You do NOT need to provide a token.** The system automatically injects your token when you call trackgentic. Just run commands directly:
 
 ```bash
-TRACKGENTIC_TOKEN="<your-token>" trackgentic <command> [options]
+trackgentic <command> [options]
 ```
 
-IMPORTANT: The trackgentic token will be provided to you. If you don't have it yet do not try to use trackgentic — STOP and ask for it. Each agent should have its own token to allow for proper attribution.
+A PreToolUse hook (`enforce-trackgentic-token.ts`) looks up your agent's token from the project's users file and injects it before the command executes. If your agent is not registered as a trackgentic user, the command will be blocked — ask your manager to register you first.
 
 ## CLI Reference
 
@@ -28,7 +28,7 @@ Create, list, view, and update issues.
 The title is a **positional argument** — do NOT use `--title`.
 
 ```bash
-TRACKGENTIC_TOKEN="<token>" trackgentic create "My issue title" [options]
+trackgentic create "My issue title" [options]
 ```
 
 Options:
@@ -44,7 +44,7 @@ Returns the created issue ID as JSON: `{ "id": "<issueId>" }`
 #### List issues
 
 ```bash
-TRACKGENTIC_TOKEN="<token>" trackgentic list [options]
+trackgentic list [options]
 ```
 
 Options:
@@ -56,7 +56,7 @@ Options:
 #### View an issue
 
 ```bash
-TRACKGENTIC_TOKEN="<token>" trackgentic view <issueId>
+trackgentic view <issueId>
 ```
 
 Returns the full computed state of an issue as JSON, including: id, title, description, status, priority, assignee, parentId, tags, createdAt, createdBy, updatedAt.
@@ -64,7 +64,7 @@ Returns the full computed state of an issue as JSON, including: id, title, descr
 #### Update an issue
 
 ```bash
-TRACKGENTIC_TOKEN="<token>" trackgentic update <issueId> [options]
+trackgentic update <issueId> [options]
 ```
 
 Options:
@@ -81,7 +81,7 @@ Returns `{ "result": "OK" }` on success.
 #### View issue history
 
 ```bash
-TRACKGENTIC_TOKEN="<token>" trackgentic history <issueId>
+trackgentic history <issueId>
 ```
 
 Returns the raw event history for an issue.
@@ -127,13 +127,13 @@ The whole project work needs to be tracked in issues. Use the CLI to manage your
 
 ### Before starting work
 
-1. List open issues assigned to you: `TRACKGENTIC_TOKEN="$TOKEN" trackgentic list --assignee "<your-name>" --status open`
-2. Check for blockages on your issues: `TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages list <issueId>`
+1. List open issues assigned to you: `trackgentic list --assignee "<your-name>" --status open`
+2. Check for blockages on your issues: `trackgentic blockages list <issueId>`
 3. Pick the highest-priority unblocked issue to work on
 
 ### When starting an issue
 
-1. View the issue details: `TRACKGENTIC_TOKEN="$TOKEN" trackgentic view <issueId>`
+1. View the issue details: `trackgentic view <issueId>`
 2. If the issue is not assigned to you, stop and report it
 3. If the issue is blocked by other issues, stop and report the blockers
 4. If the issue is done or closed, stop and report it
@@ -144,11 +144,11 @@ The whole project work needs to be tracked in issues. Use the CLI to manage your
 ### While working
 
 1. Add comments to document decisions, findings, or questions
-2. If blocked by another issue, add a blockage: `TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages add <your-issue> --by <blocker-issue>`
+2. If blocked by another issue, add a blockage: `trackgentic blockages add <your-issue> --by <blocker-issue>`
 3. Update issue status as you progress (e.g., `idea` → `in-progress` → `review` → `done`)
 
 ### After completing work
 
 1. If the issue is fully resolved: mark it as `done` and add a comment summarizing what you did
 2. If partially resolved or blocked: add a comment describing the current state, blockers, and remaining work. Mark as `todo` and reassign if needed.
-3. Resolve any blockages you were causing for other issues: `TRACKGENTIC_TOKEN="$TOKEN" trackgentic blockages resolve <your-issue> --by <was-blocking>`
+3. Resolve any blockages you were causing for other issues: `trackgentic blockages resolve <your-issue> --by <was-blocking>`

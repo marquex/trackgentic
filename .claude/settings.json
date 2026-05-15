@@ -4,6 +4,28 @@
     "BASH_MAX_TIMEOUT_MS": "1800000"
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "if": "Bash(trackgentic *)",
+            "command": "bun .claude/hooks/enforce-trackgentic-token.ts",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "bun .claude/hooks/enforce-issue-cleanup.ts",
+            "type": "command"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "hooks": [
