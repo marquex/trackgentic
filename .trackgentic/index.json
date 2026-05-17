@@ -66,6 +66,59 @@
         "core"
       ],
       "priority": 2
+    },
+    {
+      "id": "mp9zd202cl",
+      "title": "Restrict  command to todo status only",
+      "path": "issues/mp9zd202cl.json",
+      "status": "done",
+      "assignee": "cto",
+      "parentId": null,
+      "tags": [
+        "next",
+        "filter",
+        "status"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "mp9zda04cp",
+      "title": "Implement: restrict next to todo only",
+      "path": "issues/mp9zda04cp.json",
+      "status": "done",
+      "assignee": "cto",
+      "parentId": "mp9zd202cl",
+      "tags": [
+        "next",
+        "filter",
+        "status"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "mp9zda5d9n",
+      "title": "Validate: restrict next to todo only",
+      "path": "issues/mp9zda5d9n.json",
+      "status": "done",
+      "assignee": "cto",
+      "parentId": "mp9zd202cl",
+      "tags": [
+        "next",
+        "filter",
+        "status",
+        "validation"
+      ],
+      "priority": 3
+    },
+    {
+      "id": "mp9zu2ey0g",
+      "title": "Fix CLI integration tests for next-todo-only change",
+      "path": "issues/mp9zu2ey0g.json",
+      "status": "done",
+      "assignee": "cto",
+      "parentId": "mp9zd202cl",
+      "tags": [],
+      "priority": 3
     }
   ],
   "closed": [],
@@ -75,6 +128,11 @@
       "mp9xemy1j3",
       "mp9xevrbwj",
       "mp9xev4b6c"
+    ],
+    "mp9zd202cl": [
+      "mp9zda04cp",
+      "mp9zda5d9n",
+      "mp9zu2ey0g"
     ]
   }
 }

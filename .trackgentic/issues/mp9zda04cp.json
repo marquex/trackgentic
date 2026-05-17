@@ -1,0 +1,77 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T16:19:31.072Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:19:31.072Z",
+    "author": "javi",
+    "content": {
+      "title": "Implement: restrict next to todo only",
+      "description": "Spec: .agentic/specs/next-todo-only-spec.md\n\nSingle-line change: in Tracker.next(), change the status filter from [idea, todo, in-progress] to [todo] only.\n\nFiles to modify:\n- src/core/tracker.ts — status filter in next() method\n- Tests — update existing next tests + add exclusion tests for idea/in-progress statuses\n- Optionally update NO_ISSUES_AVAILABLE message clarity\n\nAcceptance: next only returns todo issues. Tests pass. All quality gates green.",
+      "status": "todo",
+      "assignee": "library-developer",
+      "parentId": "mp9zd202cl",
+      "tags": [
+        "next",
+        "filter",
+        "status"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:26:16.739Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T16:31:18.093Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9zsg5ks8",
+      "content": "Implementation verified by CTO. Changes match the spec: status filter narrowed from [idea, todo, in-progress] to [todo] only in tracker.ts next() method. All 14 tests pass. Message updated from 'No unblocked issues found' to 'No todo issues found'. The key exclusion test now confirms idea and in-progress issues are excluded even with higher priority. Marking as done — forwarding to validation."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:31:25.340Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "cto"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T16:32:20.237Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9ztsxn1n",
+      "content": "CTO review found 3 failing CLI integration tests in tests/cli/commands.test.ts. The developer updated unit tests in tracker-next.test.ts but missed the CLI integration tests for 'next'. Same fix needed: add status: 'todo' to issues created in those CLI tests. Failing tests: 'returns the best issue for a user', 'excludes blocked issues', 'resolved blockage treated as unblocked'. Creating follow-up fix task."
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T16:37:22.939Z",
+    "author": "javi",
+    "content": {
+      "id": "mpa009zqvq",
+      "content": "Done. Changed Tracker.next() status filter from [idea, todo, in-progress] to [todo] only. Updated NO_ISSUES_AVAILABLE message from 'No unblocked issues found' to 'No todo issues found'. Updated all existing tests (tracker-next.test.ts + commands.test.ts CLI tests) to create issues with status:todo where needed. Rewrote the status exclusion test to verify only todo is included and idea/in-progress are excluded. All 573 tests pass, typecheck and lint clean."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:37:29.406Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "cto"
+    }
+  }
+]

@@ -1,0 +1,85 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T16:19:31.160Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:19:31.160Z",
+    "author": "javi",
+    "content": {
+      "title": "Validate: restrict next to todo only",
+      "description": "Spec: .agentic/specs/next-todo-only-spec.md\n\nValidate the implementation. Verify:\n- Tracker.next() only returns todo status issues\n- idea and in-progress issues are excluded\n- All existing tests updated\n- New exclusion tests added\n- NO_ISSUES_AVAILABLE behavior preserved\n- All quality gates pass (typecheck, lint, test, coverage)",
+      "status": "todo",
+      "assignee": "library-quality",
+      "parentId": "mp9zd202cl",
+      "tags": [
+        "next",
+        "filter",
+        "status",
+        "validation"
+      ]
+    }
+  },
+  {
+    "type": "blockage-added",
+    "timestamp": "2026-05-17T16:19:37.380Z",
+    "author": "javi",
+    "content": {
+      "blockerId": "mp9zda04cp"
+    }
+  },
+  {
+    "type": "blockage-resolved",
+    "timestamp": "2026-05-17T16:31:25.343Z",
+    "author": "system",
+    "content": {
+      "blockerId": "mp9zda04cp",
+      "reason": "Blocker issue mp9zda04cp transitioned to done"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:32:20.485Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "blockage-added",
+    "timestamp": "2026-05-17T16:32:40.159Z",
+    "author": "javi",
+    "content": {
+      "blockerId": "mp9zu2ey0g"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T16:34:29.607Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9zwk85ww",
+      "content": "## Validation Report: Restrict next to todo only\n\n### Quality Gate Results\n\n| Gate | Status |\n|------|--------|\n| typecheck | PASS |\n| lint | PASS |\n| docs:check | PASS |\n| test:coverage | **FAIL** — 3 test failures |\n| tracker.ts line coverage | 100% |\n\n### Implementation Assessment\n\nThe **core implementation is correct**:\n- `tracker.ts` line 547: `e.status === \"todo\"` — properly filters to todo only ✓\n- `NO_ISSUES_AVAILABLE` message: \"No todo issues found for user '...\" ✓\n- Unit tests in `tracker-next.test.ts` (20 tests) all pass with proper `status: \"todo\"` ✓\n- Explicit exclusion test for idea/in-progress exists at Tracker level ✓\n\n### CRITICAL: 3 failing CLI integration tests\n\nThe CLI tests in `tests/cli/commands.test.ts` create issues via CLI **without `--status`**, so they default to `\"idea\"`. Since `next()` now only returns `todo`, these fail:\n\n1. **Line 888**: \"returns the best issue for a user\" — lines 890-892 need `--status \"todo\"` on all 3 `runCLI(\"create\", ...)` calls\n2. **Line 905**: \"excludes blocked issues\" — lines 909, 911 need `--status \"todo\"` on alice-assigned creates\n3. **Line 960**: \"resolved blockage treated as unblocked\" — line 964 needs `--status \"todo\"` on alice-assigned create\n\n**Fix pattern:** Add `--status`, `\"todo\"` to each `runCLI(\"create\", ...)` call for issues that should appear in `next` results.\n\n### Missing CLI test: explicit idea/in-progress exclusion\n\nPer spec requirement 4, there should be a CLI-level test verifying that `idea` and `in-progress` issues are excluded. The existing \"excludes done and closed issues\" test (line 946) only covers `done`/`closed`. A new test should create `idea` and `in-progress` issues alongside a `todo` issue and verify only `todo` is returned.\n\n### JSDoc inaccuracy\n\n`tracker.ts` line 511: JSDoc says \"Filters open issues by assignee and **active status**\" — \"active status\" is ambiguous. Should say \"Filters open issues by assignee and **todo status**\" per the spec change.\n\n### Summary\n\n- **Implementation**: Correct ✓\n- **Unit tests**: Complete and passing ✓\n- **CLI tests**: Need 3 fixes + 1 new test (spec requirement 4) — must be addressed by library-developer\n- **Docs**: Minor JSDoc wording fix needed"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:34:36.340Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "cto"
+    }
+  },
+  {
+    "type": "blockage-resolved",
+    "timestamp": "2026-05-17T16:39:27.795Z",
+    "author": "system",
+    "content": {
+      "blockerId": "mp9zu2ey0g",
+      "reason": "Blocker issue mp9zu2ey0g transitioned to done"
+    }
+  }
+]

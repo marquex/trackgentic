@@ -887,9 +887,9 @@ describe("CLI commands", () => {
   describe("next", () => {
     test("returns the best issue for a user", async () => {
       await runCLI("init");
-      await runCLI("create", "Low Priority", "--assignee", "alice", "--priority", "5");
-      await runCLI("create", "High Priority", "--assignee", "alice", "--priority", "1");
-      await runCLI("create", "Medium Priority", "--assignee", "alice", "--priority", "3");
+      await runCLI("create", "Low Priority", "--assignee", "alice", "--priority", "5", "--status", "todo");
+      await runCLI("create", "High Priority", "--assignee", "alice", "--priority", "1", "--status", "todo");
+      await runCLI("create", "Medium Priority", "--assignee", "alice", "--priority", "3", "--status", "todo");
 
       const { stdout, stderr, exitCode } = await runCLI("next", "alice");
 
@@ -906,9 +906,9 @@ describe("CLI commands", () => {
       await runCLI("init");
 
       const blocked = JSON.parse(
-        (await runCLI("create", "Blocked", "--assignee", "alice", "--priority", "1")).stdout.trim(),
+        (await runCLI("create", "Blocked", "--assignee", "alice", "--priority", "1", "--status", "todo")).stdout.trim(),
       );
-      await runCLI("create", "Unblocked", "--assignee", "alice", "--priority", "3");
+      await runCLI("create", "Unblocked", "--assignee", "alice", "--priority", "3", "--status", "todo");
       const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());
 
       await runCLI("blockages", "add", blocked.id, "--by", blocker.id);
@@ -961,7 +961,7 @@ describe("CLI commands", () => {
       await runCLI("init");
 
       const issue = JSON.parse(
-        (await runCLI("create", "Previously Blocked", "--assignee", "alice", "--priority", "1"))
+        (await runCLI("create", "Previously Blocked", "--assignee", "alice", "--priority", "1", "--status", "todo"))
           .stdout.trim(),
       );
       const blocker = JSON.parse((await runCLI("create", "Blocker")).stdout.trim());

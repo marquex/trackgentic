@@ -1,0 +1,52 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T16:32:33.448Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:32:33.448Z",
+    "author": "javi",
+    "content": {
+      "title": "Fix CLI integration tests for next-todo-only change",
+      "description": "The next-todo-only change (mp9zda04cp) updated tracker.ts and tracker-next.test.ts but missed 3 CLI integration tests in tests/cli/commands.test.ts. These tests create issues without specifying status: 'todo', so next() can't find them anymore. \n\nFailing tests:\n- CLI commands > next > returns the best issue for a user (line ~900)\n- CLI commands > next > excludes blocked issues (line ~921)\n- CLI commands > next > resolved blockage treated as unblocked (line ~977)\n\nFix: Add status: 'todo' to all issue create calls in the 'next' describe block of tests/cli/commands.test.ts, matching what was done in tracker-next.test.ts.\n\nAcceptance: All 573 tests pass (0 fail).",
+      "status": "todo",
+      "assignee": "library-developer"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:32:45.117Z",
+    "author": "javi",
+    "content": {
+      "parentId": "mp9zd202cl"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:38:17.534Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T16:39:20.548Z",
+    "author": "javi",
+    "content": {
+      "id": "mpa02svif9",
+      "content": "Verified: all 573 tests pass (0 fail). The fix was already applied — all issue create calls in the 'next' describe block of tests/cli/commands.test.ts already include --status todo. No code changes were needed. Typecheck, lint, and all tests pass."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:39:27.793Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "cto"
+    }
+  }
+]

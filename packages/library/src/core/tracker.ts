@@ -542,10 +542,9 @@ export class Tracker {
 
     const index = await readIndex(trackerDir);
 
-    // Filter to open issues assigned to this user with actionable statuses
-    const openStatuses: IssueStatus[] = ["idea", "todo", "in-progress"];
+    // Filter to open issues assigned to this user that are todo (ready to start)
     let candidates = index.open.filter(
-      (e) => e.assignee === assignee && openStatuses.includes(e.status),
+      (e) => e.assignee === assignee && e.status === "todo",
     );
 
     // Read dependencies for blockage filtering and impact scoring
@@ -561,7 +560,7 @@ export class Tracker {
     if (candidates.length === 0) {
       return {
         result: "NO_ISSUES_AVAILABLE",
-        message: `No unblocked issues found for user '${assignee}'.`,
+        message: `No todo issues found for user '${assignee}'.`,
       };
     }
 

@@ -9,14 +9,14 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Dogfooding active. `next <user-name>` command implemented (mp3rc7femf, code complete). 569 tests, 1997 assertions, 100% tracker.ts line coverage. Active work: cap upward auto-promotion at in-progress (parent mp9xefucmo, in-progress). Both reviews done (mp9xemq9mv, mp9xemy1j3). Spec updated to REVIEWED with clarifications for reason strings, multi-level propagation, and 7 additional test cases. Implementation (mp9xevrbwj) now unblocked — runner should pick up. Validation (mp9xev4b6c) blocked by implementation. Pending issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
+expertise_status: "Dogfooding active. Cap upward auto-promotion complete (mp9xefucmo, done). Active work: restrict `next` command to todo-only status filter (parent mp9zd202cl, in-progress). Reviews skipped — trivially scoped single-line change. Implementation mp9zda04cp → library-developer (unblocked). Validation mp9zda5d9n → library-quality (blocked by implementation). Pending issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
 
 project_overview:
   name: trackgentic
   type: npm library (TypeScript, Bun runtime)
   purpose: Issue tracker designed for AI agents — file-backed, event-sourced, git-friendly
   distribution: npm package with CLI entry point (`trackgentic` command)
-  stage: "Dogfooding active. `next` command implemented (569 tests, 1997 assertions, 100% tracker.ts coverage). Agent runner live — CTO processed /trackgentic-implement for mp9xefucmo. Current work: cap upward auto-promotion at in-progress (mp9xefucmo, reviews done, implementation unblocked). Standing issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
+  stage: "Dogfooding active. Cap upward auto-promotion complete (mp9xefucmo). Agent runner live. Current work: restrict `next` to todo-only (parent mp9zd202cl, in-progress). Standing issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
   bun_version: "1.3.11"
   build_tool: tsup (implemented, producing dist/)
   docs_tool: TypeDoc HTML output (configured, generates to docs-html/)
@@ -56,6 +56,8 @@ specifications:
       description: Phase 7 specification — JSDoc on all public API, error message polish, edge case & resilience testing, package configuration verification
     - path: next-command-spec.md
       description: "`next <user-name>` command — recommend highest-priority unblocked issue for a user. Returns ComputedIssue or NO_ISSUES_AVAILABLE. Filters by assignee, actionable statuses (idea/todo/in-progress), no active blockages. Sort: priority ASC → impact DESC → id ASC."
+    - path: next-todo-only-spec.md
+      description: "Amends next-command-spec: restrict status filter from [idea, todo, in-progress] to [todo] only. Single-line change in Tracker.next(). REVIEWED — reviews skipped (trivially scoped). Implementation mp9zda04cp in-progress with library-developer."
     - path: cap-upward-promotion-spec.md
       description: "Cap upward auto-promotion at in-progress. Parents never auto-promote to done/closed via computeUpwardPromotions. Spec status: REVIEWED. Reason format: auto-promoted to TARGET: child advanced to CHILD. 7 new test cases required."
 
@@ -232,3 +234,9 @@ session_log:
   - session: 46
     date: "2026-05-17"
     summary: "Picked up mp9xefucmo via /trackgentic-implement. Both reviews had completed: quality review (mp9xemy1j3) raised 3 critical ambiguities (reason strings, multi-level propagation semantics, no-promotion edge case). Updated spec from DRAFT to REVIEWED with new 'Clarifications' section addressing all concerns: (1) reason format auto-promoted to TARGET: child advanced to CHILD, (2) no promotion when capped status equals parent, (3) each level applies cap independently, (4) 7 required new test cases in table. Developer review (mp9xemq9mv) confirmed viable, ~5 LOC change, 7 tests to update. Implementation (mp9xevrbwj) unblocked — awaiting runner."
+  - session: 47
+    date: "2026-05-17"
+    summary: "User re-requested `next` todo-only change. Previous issue (mp9kuwi7dt) no longer exists. Reused existing spec (.agentic/specs/next-todo-only-spec.md), updated to REVIEWED, skipped review phase (trivially scoped single-line filter change). Created new issue chain: parent mp9zd202cl, implement mp9zda04cp → library-developer (unblocked), validate mp9zda5d9n → library-quality (blocked by implementation). Updated expertise."
+  - session: 48
+    date: "2026-05-17"
+    summary: "Picked up mp9zd202cl via /trackgentic-implement. Verified issue chain is properly set up: parent in-progress, implementation mp9zda04cp unblocked for library-developer, validation mp9zda5d9n blocked by implementation. No action needed — awaiting agent runner to execute children. Updated expertise."

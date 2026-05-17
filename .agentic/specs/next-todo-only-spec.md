@@ -33,4 +33,8 @@ No API changes — same method signature, same return type (`NextResult`). Only 
 - No changes to any other command
 - No new CLI flags or options
 
-## Status: DRAFT
+## Status: REVIEWED
+
+### Decision
+
+Skip review phase — trivially scoped change (single filter line). Reviews add no value here. Go straight to implementation + validation.

@@ -1,0 +1,40 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T16:19:20.193Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:19:20.193Z",
+    "author": "javi",
+    "content": {
+      "title": "Restrict  command to todo status only",
+      "description": "Spec: .agentic/specs/next-todo-only-spec.md\n\nChange the next command's status filter from [idea, todo, in-progress] to [todo] only. Rationale: next should recommend work that's triaged and ready to start — not unvetted ideas or already-in-flight work.",
+      "status": "todo",
+      "assignee": "cto",
+      "tags": [
+        "next",
+        "filter",
+        "status"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:19:42.952Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T16:31:25.342Z",
+    "author": "system",
+    "content": {
+      "status": "done",
+      "reason": "auto-promoted: child advanced to 'done'"
+    }
+  }
+]
