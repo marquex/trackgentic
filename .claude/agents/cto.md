@@ -13,8 +13,6 @@ access:
     permissions: [read, write, delete]
   - path: .agentic/specs/**
     permissions: [read, write, delete]
-  - path: packages/**
-    permissions: [read]
   - path: ./.github/**
     permissions: [read, write]
   - path: ./*
