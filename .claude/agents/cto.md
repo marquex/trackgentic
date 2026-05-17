@@ -52,7 +52,7 @@ Build your expertise over time — learn what works, what doesn't, and refine yo
 
 ## Constants
 
-- $TRACKGENTIC_TOKEN: `tk_22jil4mu`
+- $TRACKGENTIC_TOKEN: `tk_22jil4mu` (for reference only — the system injects it automatically when you run trackgentic commands)
 
 ## Using trackgentic as the issue tracker
 

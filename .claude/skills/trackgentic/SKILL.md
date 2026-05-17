@@ -15,7 +15,9 @@ Trackgentic is a file-backed, event-sourced, git-friendly issue tracker designed
 trackgentic <command> [options]
 ```
 
-A PreToolUse hook (`enforce-trackgentic-token.ts`) looks up your agent's token from the project's users file and injects it before the command executes. If your agent is not registered as a trackgentic user, the command will be blocked — ask your manager to register you first.
+A PreToolUse hook (`enforce-trackgentic-token.ts`) looks up your agent's token from `.trackgentic/users.json` using your agent name, strips any token you may have added to the command, and injects the correct one as `TRACKGENTIC_USER_TOKEN=xxx` before the command executes. This ensures every agent always uses its own registered token.
+
+If your agent is not registered as a trackgentic user, the command will be blocked — ask your manager to register you first with `trackgentic users register "<agent-name>"`.
 
 ## CLI Reference
 

@@ -2,23 +2,30 @@
 /**
  * enforce-trackgentic-token.ts
  *
- * PreToolUse hook that ensures agents have a trackgentic token available
- * before calling the trackgentic CLI. Reads the token from the
- * TRACKGENTIC_USER_TOKEN environment variable. If not set, the call is
- * blocked. If set, strips any token the agent may have put in the command
- * and injects the correct one from the environment.
+ * PreToolUse hook that ensures agents use their own trackgentic token
+ * when calling the trackgentic CLI.
+ *
+ * Token resolution:
+ *   - Looks up the agent's token from .trackgentic/users.json by matching
+ *     the agent_type against the user name.
+ *   - Strips any token the agent may have manually put in the command and
+ *     injects the correct one from users.json.
+ *   - Injects the token as TRACKGENTIC_USER_TOKEN=xxx prefix.
  *
  * Decision logic:
  *   1. No agent_type → main agent, allow
  *   2. Not a Bash command → allow
  *   3. Command doesn't contain "trackgentic" → allow (safety net)
- *   4. Check TRACKGENTIC_USER_TOKEN env var
- *   5. If not set → deny (agent cannot use trackgentic without a token)
+ *   4. Look up agent's token from .trackgentic/users.json
+ *   5. If not found → deny (agent is not registered as a trackgentic user)
  *   6. Strip any existing TRACKGENTIC_TOKEN / TRACKGENTIC_USER_TOKEN from command
- *   7. Inject the token from env via updatedInput → allow
+ *   7. Inject the resolved token via updatedInput → allow
  *
  * Run with Bun (https://bun.sh). Uses only Node-compatible APIs.
  */
+
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // ---------- types ----------
 
@@ -27,6 +34,16 @@ interface HookEvent {
   cwd?: string;
   tool_name: string;
   tool_input?: Record<string, unknown>;
+}
+
+interface UserRecord {
+  name: string;
+  token: string;
+  registeredAt: string;
+}
+
+interface UsersFile {
+  users: UserRecord[];
 }
 
 // ---------- decision helpers ----------
@@ -82,6 +99,22 @@ function stripExistingTokenEnv(cmd: string): string {
     .trimStart();
 }
 
+/**
+ * Look up an agent's trackgentic token from the users file by matching
+ * the agent_type against the registered user name.
+ */
+function lookupToken(agentType: string, cwd: string): string | undefined {
+  const usersPath = join(cwd, '.trackgentic', 'users.json');
+  try {
+    const raw = readFileSync(usersPath, 'utf-8');
+    const data = JSON.parse(raw) as UsersFile;
+    const user = data.users.find((u) => u.name === agentType);
+    return user?.token;
+  } catch {
+    return undefined;
+  }
+}
+
 // ---------- main ----------
 
 async function main(): Promise<never> {
@@ -104,13 +137,14 @@ async function main(): Promise<never> {
   // Only enforce for trackgentic commands
   if (!cmd.includes('trackgentic')) return allow('not a trackgentic command');
 
-  // Read the token from the environment variable
-  const token = process.env['TRACKGENTIC_USER_TOKEN'];
+  // Look up the agent's token from users.json
+  const cwd = event.cwd ?? process.cwd();
+  const token = lookupToken(agentType, cwd);
 
   if (!token) {
     return deny(
-      `enforce-trackgentic-token: agent '${agentType}' has no TRACKGENTIC_USER_TOKEN environment variable set. ` +
-      `The agent runner must provide this variable when launching the agent.`
+      `enforce-trackgentic-token: agent '${agentType}' is not registered as a trackgentic user. ` +
+      `Ask your manager to register you with: trackgentic users register "${agentType}"`
     );
   }
 

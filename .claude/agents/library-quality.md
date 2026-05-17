@@ -54,7 +54,7 @@ Build your expertise over time — learn the library's patterns, discover what k
 
 ## Constants
 
-- $TRACKGENTIC_TOKEN: `tk_cmaub6ek`
+- $TRACKGENTIC_TOKEN: `tk_cmaub6ek` (for reference only — the system injects it automatically when you run trackgentic commands)
 
 ## Advisory Workflow
 

@@ -77,12 +77,12 @@ architecture:
       - name: trackgentic
         purpose: Interact with the trackgentic issue tracker — create, list, view, update issues, comments, users, blockages
         has_scripts: false
-        auth_mechanism: Token read from TRACKGENTIC_USER_TOKEN env var and injected by enforce-trackgentic-token.ts hook — agents call trackgentic directly without token prefix
+        auth_mechanism: Token looked up from .trackgentic/users.json by enforce-trackgentic-token.ts hook and injected as TRACKGENTIC_USER_TOKEN env var — agents call trackgentic directly without token prefix
         notes: |
           Pure reference skill — no scripts, just CLI usage documentation.
           Each agent should be registered via `trackgentic users register <name>` to get their own token.
-          The agent runner must set TRACKGENTIC_USER_TOKEN in the environment when launching an agent.
-          The PreToolUse hook reads the env var, strips any manual token from the command, and injects the correct one.
+          The PreToolUse hook reads users.json, matches agent_type to user name, strips any manual token from the command, and injects the correct one.
+          Agents do NOT need to provide tokens manually. The $TRACKGENTIC_TOKEN constant in agent system files is informational only.
       - name: trackgentic-manager
         purpose: Issue flow for manager agents — triage, assign, monitor, unblock, review, close issues
         has_scripts: false
@@ -110,14 +110,14 @@ architecture:
           - Bash commands classified by patterns (redirection, rm, cp, etc.)
       - name: enforce-trackgentic-token.ts
         trigger: PreToolUse (Bash(trackgentic *)) — project-wide in settings.json
-        purpose: Ensure agents have a trackgentic token before calling the CLI; inject it from env var
+        purpose: Ensure agents use their own registered trackgentic token when calling the CLI
         key_behaviors:
           - Main agent (no agent_type) is always allowed without modification
-          - Reads token from TRACKGENTIC_USER_TOKEN environment variable
-          - If env var not set → deny (agent cannot use trackgentic)
+          - Looks up token from .trackgentic/users.json by matching agent_type against user name
+          - If agent not found in users.json → deny with registration instructions
           - Strips any existing TRACKGENTIC_TOKEN or TRACKGENTIC_USER_TOKEN from the command
-          - Injects the env var token via updatedInput: TRACKGENTIC_USER_TOKEN="<token>" <command>
-          - Agents do NOT need to know their own tokens — the hook handles everything transparently
+          - Injects the looked-up token via updatedInput: TRACKGENTIC_USER_TOKEN="<token>" <command>
+          - Agents do NOT need to know or provide their own tokens — the hook handles everything transparently
       - name: enforce-issue-cleanup.ts
         trigger: SubagentStop — project-wide in settings.json
         purpose: Prevent agents from stopping with unblocked active issues assigned to them
@@ -182,7 +182,7 @@ patterns:
   - Reference-only skills (no scripts): SKILL.md frontmatter just needs `name` and `description`, no `allowed-tools` or `argument-hint` needed. The body is purely instructional — teaches the agent how to use an external CLI tool, API, or convention. The trackgentic skill is the first example of this pattern.
   - Role-specific skill splitting: when a base skill has different workflows for different agent roles (e.g. manager vs subordinate), split each workflow into its own skill directory. The base skill holds the shared reference (CLI docs, auth, etc.) and each role skill holds the workflow instructions. Assign agents both the base skill and their role-specific skill. This keeps skill content focused and avoids agents loading irrelevant workflows.
   - PreToolUse updatedInput is powerful for transparent command modification: the hook can modify tool_input (e.g. inject env vars into Bash commands) without the agent needing to know. Combined with permissionDecision: "allow", the tool call proceeds with the modified input seamlessly. This is better than requiring agents to manually include the right values.
-  - When moving from agent-managed tokens to hook-injected tokens: remove token from agent files (no more `IMPORTANT: Your token is...`), remove token prefix from skill examples, update the hook to use updatedInput instead of deny-on-mismatch. The skill docs should tell agents "just call trackgentic directly" instead of "prepend your token". The token is sourced from the TRACKGENTIC_USER_TOKEN env var (set by the agent runner), not from the users file on disk.
+  - Token injection pattern: the hook reads .trackgentic/users.json (not env var) to find the agent's token by name, strips any manual token from the command, and injects the correct one via updatedInput. The agent system files have $TRACKGENTIC_TOKEN as an informational-only constant. The SKILL.md tells agents "just call trackgentic directly" and explains the hook handles auth transparently.
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
@@ -199,7 +199,7 @@ gotchas:
   - "Blockages `--by` is variadic (`--by id1 id2`) — when documenting variadic options, add an explicit note since agents may not infer this from `--by <id1> <id2> ...` syntax alone."
   - "In settings.json, Stop and SubagentStop are separate events. In agent frontmatter, Stop is auto-converted to SubagentStop for subagents. Use SubagentStop in settings.json for hooks that should fire when subagents finish."
   - "The `if` condition in settings.json hooks uses permission rule syntax: `Bash(trackgentic *)` matches after VAR=value stripping, so `TRACKGENTIC_TOKEN=... trackgentic list` correctly matches. Only evaluated for PreToolUse/PostToolUse/PostToolUseFailure/PermissionRequest/PermissionDenied events."
-  - "Token enforcement now reads from the TRACKGENTIC_USER_TOKEN environment variable — the enforce-trackgentic-token.ts hook checks process.env, denies if not set, and injects via updatedInput. The agent runner must set this env var when launching agents."
+  - "Token enforcement reads from .trackgentic/users.json (not env var) — the enforce-trackgentic-token.ts hook uses agent_type to look up the agent's registered token, strips any manual token from the command, and injects the correct one. No env var needed; no agent runner changes needed. The $TRACKGENTIC_TOKEN constant in agent system files is informational only."
   - "Hook placement strategy: project-wide enforcement hooks (token injection, issue cleanup) go in settings.json so they apply to all agents automatically without per-agent config. Agent-specific hooks (access control, expertise injection) stay in agent frontmatter since they need per-agent configuration. This avoids duplicating hook config across every agent file."
   - "The enforce-issue-cleanup.ts SubagentStop hook uses both `reason` (shown to the agent) and `systemMessage` (shown to the user) in its block output. Both fields work for SubagentStop just like Stop."
 

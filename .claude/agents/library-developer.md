@@ -53,7 +53,7 @@ Build your expertise over time — learn the project's patterns, refine your app
 
 ## Constants
 
-- $TRACKGENTIC_TOKEN: `tk_3vdu1mgu`
+- $TRACKGENTIC_TOKEN: `tk_3vdu1mgu` (for reference only — the system injects it automatically when you run trackgentic commands)
 
 ## Mandatory Pre-Completion Steps
 Before marking any task as complete, you MUST:
