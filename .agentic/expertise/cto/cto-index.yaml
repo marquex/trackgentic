@@ -9,7 +9,7 @@ hierarchy:
       - library-developer (implementation)
       - library-quality (testing, documentation, quality gates)
 
-expertise_status: "Dogfooding active. Agent runner mechanism live and tested — CTO successfully received and processed `/worktask mp5r0cd19j` (test task) via worktask skill. Followed structured workflow: view → validate assignment/blockages/status → handle per-status logic (idea → comment with analysis, no code changes). Issue mp5r0cd19j received 3 invocations while in idea status — each produced correct analysis comments. `next <user-name>` command implemented (mp3rc7femf, still in-progress status but code is complete). 569 tests, 1997 assertions, 100% tracker.ts line coverage. Pending issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
+expertise_status: "Dogfooding active. `next <user-name>` command implemented (mp3rc7femf, code complete). 569 tests, 1997 assertions, 100% tracker.ts line coverage. New work in flight: `next` command status filter change — restrict to `todo` only, excluding `idea` and `in-progress` (parent mp9kuwi7dt, blocked by dev review mp9kv3umii + quality review mp9kv3wyao). Spec at .agentic/specs/next-todo-only-spec.md (DRAFT). Pending issues: v0.1.0 release (mp3peanz8b), defensive index validation (mp3pe95w9e), typedoc-plugin-markdown cleanup (mp3pe9lvdq), concurrent writes decision (mp3pe96e9f), CLAUDE.md decision (mp3pe9urb9)."
 
 project_overview:
   name: trackgentic
@@ -221,3 +221,6 @@ session_log:
   - session: 43
     date: "2026-05-14"
     summary: "Third `/worktask` invocation for mp5r0cd19j. Issue was still in `idea` status despite two previous analysis comments. Added third analysis comment noting prior invocations and recommending move to `todo` for completion. Updated expertise files — refined expertise_status with agent runner testing details."
+  - session: 44
+    date: "2026-05-17"
+    summary: "User requested `next` command change: restrict to `todo` status only (currently accepts idea/todo/in-progress). Drafted spec (.agentic/specs/next-todo-only-spec.md). Created issue chain: parent mp9kuwi7dt (blocked by dev review mp9kv3umii + quality review mp9kv3wyao). Awaiting review feedback before finalizing spec and creating implementation tasks."

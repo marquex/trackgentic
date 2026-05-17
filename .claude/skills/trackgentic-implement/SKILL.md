@@ -1,12 +1,12 @@
 ---
 name: trackgentic-implement
-description: "Worker skill — pick up an assigned issue, implement it, and hand it back via trackgentic status transitions. Receives issue ID from prompt argument or TRACKGENTIC_ISSUE_ID env var."
+description: "Pick up an assigned issue, implement it, and hand it back via trackgentic status transitions. Receives issue ID from prompt argument."
 argument-hint: "<issue-id>"
 ---
 
-# Trackgentic Implement — Worker Skill
+# Trackgentic Implement
 
-This skill defines how a worker agent picks up, executes, and hands back an issue using trackgentic.
+This skill defines how an agent picks up, executes, and hands back an issue using trackgentic.
 
 ## Issue ID Resolution
 
@@ -17,7 +17,22 @@ The issue ID is resolved in this order:
 
 If neither is available, stop and report the error.
 
-## Workflow
+## CTO: Planning Requests
+
+If you are the CTO and the issue is a **high-level planning request** (no children, no spec file, just a description of a feature/change), use the `/issue` skill instead of implementing directly:
+
+1. Read the issue description
+2. Invoke the `/issue` planning flow: analyze, draft spec, create review tasks, create implementation tasks, set blockages
+3. When done, the parent issue stays `in-progress` — do NOT mark it as `done`
+
+The `/issue` skill creates all subtasks (reviews, implementation, quality validation) with proper blockages so the runner picks them up automatically. You do NOT implement code changes yourself.
+
+If the issue already has children and is unblocked (children completed), review the results:
+- Read comments on child issues
+- If work is satisfactory, close the parent: `trackgentic update <issue-id> --status "done"`
+- If work needs changes, create new child issues as needed
+
+## Workers: Implementation Flow
 
 ### 1. Retrieve Context
 
@@ -46,7 +61,7 @@ Move to `in-progress`:
 trackgentic update <issue-id> --status "in-progress"
 ```
 
-Read the issue description and comments carefully. Understand acceptance criteria before writing code.
+Read the issue description and comments carefully. If the issue references a spec, read it. If the issue references review issues, read their comments too — they contain critical feedback. Understand acceptance criteria before writing code.
 
 ### 4. While Working
 

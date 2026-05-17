@@ -3,7 +3,7 @@
  * Agent runner — manages a team of Claude agents pulling issues from trackgentic.
  *
  * Reads agent names from .trackgentic/users.json, polls every 60s for available work,
- * and spawns `claude --agent <name> -p "/worktask <issueId>"` child processes.
+ * and spawns `claude --agent <name> -p "/trackgentic-implement <issueId>"` child processes.
  *
  * Displays a live TUI showing each agent's status.
  */
@@ -108,7 +108,7 @@ function launchAgent(agent: AgentState, issueId: string): void {
     [
       "claude",
       "--agent", agent.name,
-      "-p", `/worktask ${issueId}`,
+      "-p", `/trackgentic-implement ${issueId}`,
       "--output-format", "stream-json",
       "--verbose",
     ],

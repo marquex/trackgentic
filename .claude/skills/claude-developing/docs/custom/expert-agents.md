@@ -41,9 +41,8 @@ description: A brief description of the expert agent's domain, purpose and when 
 tools: Read, Grep, Glob
 skills:
   - agent-expertise
-  - worktask
   - trackgentic
-  - trackgentic-subordinate
+  - trackgentic-implement
 subordinates: []  # list of agent names this agent can assign work to (omit if none)
 access:
   - path: .agentic/expertise/expert-agent/**
@@ -89,7 +88,7 @@ Your manager is `manager-name` — you receive assigned tasks from it.
 
 ## Using trackgentic as the issue tracker
 
-You manage your work through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-subordinate` skill for best practices on how to pick up, execute, report, and hand back issues effectively.
+You manage your work through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-implement` skill for best practices on how to pick up, execute, report, and hand back issues effectively.
 
 IMPORTANT: Your trackgentic token is `<token-here>`.
 
@@ -105,10 +104,8 @@ This restriction is to keep you focused on your domain and avoid distractions. D
 
 The frontmatter of an expert agent has some specific content:
 - The `agent-expertise` skill teaches the agent how to build expertise and how to use its long-term memory on every session.
-- The `worktask` skill teaches the agent how to pick up and work on trackgentic issues.
+- The `trackgentic-implement` skill teaches the agent how to pick up, implement, and hand back trackgentic issues. Manager agents also get the `issue` skill for planning and delegation.
 - The `trackgentic` skill provides the CLI reference for the issue tracker.
-- The `trackgentic-subordinate` skill provides the issue flow for worker agents.
-- The `trackgentic-manager` skill is included if the agent has subordinates — it provides the issue flow for manager agents.
 - The `subordinates` field is a list of agent names that this agent can assign work to. Omit if the agent is a leaf agent.
 - The `access` section grants the agent permissions to read, write and delete files. It should include at least the path to the agent's expertise folder with read, write and delete permissions, and it can also include other paths with read permissions if needed.
 - The `hooks` section includes a PreToolUse hook that runs `enforce-agent-access.ts` before using any tool. This script enforces the access restrictions.

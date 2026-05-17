@@ -5,9 +5,8 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 model: opus
 skills:
   - agent-expertise
-  - worktask
   - trackgentic
-  - trackgentic-subordinate
+  - trackgentic-implement
 access:
   - path: .agentic/expertise/library-quality/**
     permissions: [read, write, delete]

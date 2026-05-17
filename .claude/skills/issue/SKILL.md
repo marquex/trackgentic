@@ -1,6 +1,6 @@
 ---
 name: issue
-description: "Manager skill — analyze a user request, create a technical spec, break it into trackable issues, assign to workers, and set blockages so work can begin. Receives the request as a prompt argument."
+description: "Manager skill — analyze a user request, create a technical spec, break it into trackable issues with reviews AND implementation tasks, assign to workers, and set blockages so work flows automatically from review to implementation to quality validation. Receives the request as a prompt argument."
 argument-hint: "<description of the change or feature>"
 ---
 
@@ -52,14 +52,14 @@ trackgentic create "<concise title>" \
   --status "todo" \
   --priority <1-5> \
   --tags "<relevant,tags>" \
-  --assignee "<your-own-name>"
+  --assignee "cto"
 ```
 
-The parent issue represents the overall goal. It starts as `todo` assigned to you. You will block it by the review tasks so it re-enters your queue only when reviews are complete.
+The parent issue represents the overall goal. It stays assigned to the CTO throughout the lifecycle.
 
-### 4. Create Review Tasks and Block Parent
+### 4. Create Review Tasks
 
-Before any implementation, create child issues for subordinates to **review the draft spec** and provide feedback:
+Create child issues for subordinates to **review the draft spec**:
 
 ```bash
 trackgentic create "Review spec: <slug>" \
@@ -79,54 +79,25 @@ trackgentic create "Review spec: <slug> (quality perspective)" \
   --tags "review,spec"
 ```
 
-Now block the parent by both review tasks. This keeps the parent out of your actionable queue until reviews complete:
+### 5. Create Implementation Tasks
+
+Now create the actual work items. These are blocked by the review tasks, so they only become actionable after reviews complete.
+
+**IMPORTANT:** Implementation agents will read both the spec AND the review comments. Review comments contain the key feedback that improves the implementation. The spec stays as DRAFT — the combined spec + review comments give workers everything they need.
 
 ```bash
-trackgentic blockages add <parent-id> --by <dev-review-id> <quality-review-id>
-```
-
-When both reviews reach `done`, the blockages auto-resolve, and the parent issue (still `todo`, assigned to you, now unblocked) re-enters your queue. This is the trigger for the next phase.
-
-### 5. Finalize Spec (triggered when parent unblocks)
-
-When the parent reappears in your queue (`todo`, assigned to you, unblocked), it means reviews are done. Read the feedback:
-
-```bash
-trackgentic comments list <dev-review-id>
-trackgentic comments list <quality-review-id>
-```
-
-Incorporate feedback into the spec — update `.agentic/specs/<slug>-spec.md`:
-
-- Resolve feasibility issues raised by the developer
-- Add missing edge cases and acceptance criteria from quality
-- Adjust API design based on what's actually possible in the codebase
-- Change status from **DRAFT** to **FINAL**
-
-If disagreements exist, make the call — you own the architectural decision. Comment on the review issue explaining your reasoning.
-
-Close the review issues:
-
-```bash
-trackgentic update <dev-review-id> --status "closed"
-trackgentic update <quality-review-id> --status "closed"
-```
-
-### 6. Create Implementation Tasks
-
-Now that the spec is agreed upon, create the real work items:
-
-```bash
-trackgentic create "<implementation title>" \
-  --description "Spec: .agentic/specs/<slug>-spec.md\n\n<what to implement>" \
+trackgentic create "Implement: <title>" \
+  --description "Spec: .agentic/specs/<slug>-spec.md\n\nRead the spec AND the review comments on issues <dev-review-id> and <quality-review-id> before starting. The reviews contain critical feedback about feasibility, edge cases, and test impact.\n\n<what to implement>" \
   --parentId <parent-id> \
   --status "todo" \
   --assignee "library-developer" \
   --priority <same-as-parent> \
   --tags "<relevant,tags>"
+```
 
-trackgentic create "<tests & docs title>" \
-  --description "Spec: .agentic/specs/<slug>-spec.md\n\n<what to test and document>" \
+```bash
+trackgentic create "Validate: <title>" \
+  --description "Spec: .agentic/specs/<slug>-spec.md\n\nValidate the implementation done by library-developer. Run quality gates, check test coverage on changed code, verify spec compliance.\n\n<what to validate>" \
   --parentId <parent-id> \
   --status "todo" \
   --assignee "library-quality" \
@@ -134,32 +105,33 @@ trackgentic create "<tests & docs title>" \
   --tags "<relevant,tags>"
 ```
 
-### 7. Set Blockages
+### 6. Set Up Blockages
 
-If work must happen in order (e.g., tests can't be written until implementation exists):
-
-```bash
-trackgentic blockages add <tests-issue-id> --by <implementation-issue-id>
-```
-
-### 8. Add Context Comments
-
-For each implementation issue, add a comment with anything the worker needs beyond the spec — constraints, related issues, gotchas:
+Reviews block implementation. Implementation blocks quality validation:
 
 ```bash
-trackgentic comments add <child-id> \
-  --content "<context, links to spec sections, acceptance criteria summary>"
+trackgentic blockages add <implementation-id> --by <dev-review-id> <quality-review-id>
+trackgentic blockages add <validation-id> --by <implementation-id>
 ```
 
-### 9. Promote Parent
+### 7. Add Context Comments
 
-Once all implementation children are created and assigned:
+For each implementation issue, add a comment with context beyond what's in the spec:
+
+```bash
+trackgentic comments add <implementation-id> \
+  --content "<context, links to relevant code areas, acceptance criteria summary, gotchas from reviews>"
+```
+
+### 8. Promote Parent
+
+Once all tasks are created and blockages set:
 
 ```bash
 trackgentic update <parent-id> --status "in-progress"
 ```
 
-The parent stays `in-progress` (assigned to you) until all children complete.
+The parent stays `in-progress` (assigned to CTO) until all children complete.
 
 ## Decision Guidelines
 
@@ -175,7 +147,7 @@ The parent stays `in-progress` (assigned to you) until all children complete.
 
 ### When to split vs. single issue
 
-- **Split** if: different agents own different parts, work can be parallelized, or the task has natural phases (implement → test)
+- **Split** if: different agents own different parts, work can be parallelized, or the task has natural phases (review → implement → validate)
 - **Single issue** if: it's small enough for one agent in one session and doesn't need review from another agent
 
 ### When NOT to create a spec
@@ -184,6 +156,10 @@ The parent stays `in-progress` (assigned to you) until all children complete.
 - Simple config/dependency changes — issue description is enough
 - Tasks where the acceptance criteria fit in a single paragraph
 
+### When to skip reviews
+
+For trivial changes (one-line fix, config update), skip the review phase. Create only implementation + validation tasks, with no review blockages.
+
 ## Output
 
 When done, summarize what was created:
@@ -191,7 +167,9 @@ When done, summarize what was created:
 ```
 Created:
   - Spec: .agentic/specs/<slug>-spec.md
-  - Parent: <parent-id> "<title>"
-    - Child: <child-id> "<title>" → assigned to <agent> [blocked by <id>]
-    - Child: <child-id> "<title>" → assigned to <agent>
+  - Parent: <parent-id> "<title>" (assigned to cto)
+    - Review: <dev-review-id> "Review spec: <slug>" → library-developer
+    - Review: <quality-review-id> "Review spec: <slug>" → library-quality
+    - Implement: <impl-id> "Implement: <title>" → library-developer (blocked by reviews)
+    - Validate: <val-id> "Validate: <title>" → library-quality (blocked by implementation)
 ```

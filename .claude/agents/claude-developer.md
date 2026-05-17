@@ -13,6 +13,10 @@ access:
     permissions: [read, write, delete]
   - path: .agentic/expertise/**
     permissions: [read, write, delete]
+  - path: scripts/**
+    permissions: [read, write]
+  - path: .trackgentic/**
+    permissions: [read]
 hooks:
   PreToolUse:
     - matcher: "Read|Write|Edit|MultiEdit|Bash"

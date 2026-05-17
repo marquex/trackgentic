@@ -23,14 +23,14 @@ architecture:
         description: Chief Technology Officer — designs architecture, generates specs, tracks development alignment
         access: [.agentic/expertise/cto/**, ./**]
         subordinates: [library-developer, library-quality]
-        skills: [agent-expertise, worktask, trackgentic, trackgentic-manager]
+        skills: [agent-expertise, trackgentic, trackgentic-implement, issue]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
       - name: library-developer
         model: opus
         description: TypeScript library developer — owns all technical details of the npm-published library
         access: [.agentic/expertise/library-developer/**, packages/library/**, .agentic/specs/**]
         subordinates: none
-        skills: [agent-expertise, worktask, trackgentic, trackgentic-subordinate]
+        skills: [agent-expertise, trackgentic, trackgentic-implement]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
       - name: library-quality
@@ -38,7 +38,7 @@ architecture:
         description: Library quality engineer — generates tests, verifies code quality, produces documentation for the library
         access: [.agentic/expertise/library-quality/**, packages/library/**, .agentic/specs/**]
         subordinates: none
-        skills: [agent-expertise, worktask, trackgentic, trackgentic-subordinate]
+        skills: [agent-expertise, trackgentic, trackgentic-implement]
         hooks: [enforce-agent-access.ts, expertise.hook.ts (Stop)]
         manager: cto
     notes: |
@@ -67,13 +67,13 @@ architecture:
         purpose: Create new expert agents with proper hierarchy, access rules, and expertise setup
         has_scripts: false
         notes: Template-based agent creation with hierarchy integration
-      - name: worktask
-        purpose: Work on a trackgentic issue — retrieve details, manage status transitions, report progress
+      - name: trackgentic-implement
+        purpose: Pick up an assigned issue, implement it, and hand it back via trackgentic status transitions
         has_scripts: false
         notes: |
-          Replaces the old delegate skill. Instead of direct delegation, agents now receive
-          trackgentic issue assignments and the agent runner picks them up automatically.
-          The issue ID is received as a parameter.
+          Unified skill for all agents. CTO uses it for high-level planning (delegates to /issue skill).
+          Workers use it for the implementation flow (retrieve, validate, implement, hand back).
+          The runner invokes agents with `/trackgentic-implement <issue-id>`.
       - name: trackgentic
         purpose: Interact with the trackgentic issue tracker — create, list, view, update issues, comments, users, blockages
         has_scripts: false
@@ -83,18 +83,13 @@ architecture:
           Each agent should be registered via `trackgentic users register <name>` to get their own token.
           The PreToolUse hook reads users.json, matches agent_type to user name, strips any manual token from the command, and injects the correct one.
           Agents do NOT need to provide tokens manually. The $TRACKGENTIC_TOKEN constant in agent system files is informational only.
-      - name: trackgentic-manager
-        purpose: Issue flow for manager agents — triage, assign, monitor, unblock, review, close issues
+      - name: issue
+        purpose: Manager planning skill — analyze a request, draft spec, create review + implementation + quality tasks with blockages
         has_scripts: false
         notes: |
-          Paired with the trackgentic base skill (CLI reference). This skill adds the orchestration workflow on top.
-          Assigned to CTO agent. Subordinate agents get trackgentic-subordinate instead.
-      - name: trackgentic-subordinate
-        purpose: Issue flow for subordinate agents — pick up, execute, report, hand back issues
-        has_scripts: false
-        notes: |
-          Paired with the trackgentic base skill (CLI reference). This skill adds the worker workflow on top.
-          Assigned to library-developer and library-quality agents. Manager agents get trackgentic-manager instead.
+          Used by CTO to plan new features. Creates everything upfront: spec, review tasks, implementation tasks,
+          quality validation tasks, with proper blockages so the flow runs automatically through the agent runner.
+          Creates all tasks in one invocation — no re-engagement needed between phases.
 
   hooks:
     path: .claude/hooks/
@@ -161,7 +156,8 @@ conventions:
   - Agent marker expansion (ACCESS_RULES, SUBORDINATES) never modifies files on disk
   - Skills with scripts have a scripts/ folder
   - Task assignment uses trackgentic issues — managers create and assign issues, the agent runner picks them up and launches agents
-  - The agent runner uses `claude --agent <name> -p <prompt>` — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
+  - The agent runner uses `claude --agent <name> -p "/trackgentic-implement <issueId>"` — this is a separate top-level process, NOT a subagent, so Stop fires (not SubagentStop)
+  - The intended issue flow is: (1) user invokes CTO directly with `/issue "description"` in an interactive session, (2) CTO creates spec + all trackgentic issues with blockages, (3) user runs `run-agents.ts` separately, (4) runner dispatches workers who complete everything automatically through blockage chains
   - Project-wide enforcement hooks (token, issue cleanup) are in .claude/settings.json — they apply to all agents automatically
   - Agent-specific hooks (access, expertise) are in each agent's frontmatter — they apply only to that agent
   - Internal subagents (Agent tool / @-mention) only run frontmatter hooks — settings.json hooks don't fire inside them
@@ -176,13 +172,16 @@ patterns:
   - Agent creation is multi-step — always confirm before writing files, user may adjust access or hierarchy
   - Users often override the default model (sonnet) — always present model in confirmation summary so it's visible and adjustable
   - Second hire (library-developer) — user provided all info upfront in a single description; only change was model (sonnet → opus). When user gives complete info, skip directly to confirmation step.
-  - When adding first subordinate to a manager: add trackgentic-manager skill, add subordinates list, add Coordinating Work section before Restricted domain section
-  - When adding subsequent subordinates to a manager that already has trackgentic-manager skill and Coordinating Work section: just add to subordinates list in frontmatter — no structural changes needed
+  - When adding first subordinate to a manager: add the `issue` skill to the manager, add subordinates list, add Coordinating Work section before Restricted domain section
+  - When adding subsequent subordinates to a manager that already has the `issue` skill and Coordinating Work section: just add to subordinates list in frontmatter — no structural changes needed
   - Agents that create files (tests, docs) need Write/Edit in their tools list — most expert agents are read-only but quality/doc agents are exceptions
   - Reference-only skills (no scripts): SKILL.md frontmatter just needs `name` and `description`, no `allowed-tools` or `argument-hint` needed. The body is purely instructional — teaches the agent how to use an external CLI tool, API, or convention. The trackgentic skill is the first example of this pattern.
-  - Role-specific skill splitting: when a base skill has different workflows for different agent roles (e.g. manager vs subordinate), split each workflow into its own skill directory. The base skill holds the shared reference (CLI docs, auth, etc.) and each role skill holds the workflow instructions. Assign agents both the base skill and their role-specific skill. This keeps skill content focused and avoids agents loading irrelevant workflows.
   - PreToolUse updatedInput is powerful for transparent command modification: the hook can modify tool_input (e.g. inject env vars into Bash commands) without the agent needing to know. Combined with permissionDecision: "allow", the tool call proceeds with the modified input seamlessly. This is better than requiring agents to manually include the right values.
   - Token injection pattern: the hook reads .trackgentic/users.json (not env var) to find the agent's token by name, strips any manual token from the command, and injects the correct one via updatedInput. The agent system files have $TRACKGENTIC_TOKEN as an informational-only constant. The SKILL.md tells agents "just call trackgentic directly" and explains the hook handles auth transparently.
+  - Agent runner lifecycle observed end-to-end: runner polls `trackgentic next <agent>` → dispatches to free agents → agents process (read spec, analyze code, post comments, update expertise) → agents close issues → blockers auto-resolve → parent auto-promotes to done. The entire flow from poll to all-done worked correctly with no manual intervention.
+  - Upfront task creation pattern: the /issue skill should create ALL tasks (reviews + implementation + quality) in one invocation with proper blockages, so the runner can process them in sequence without requiring CTO re-engagement between phases. This avoids the "multi-phase re-engagement" failure mode where the CTO never gets re-dispatched.
+  - Skill consolidation: replaced worktask + trackgentic-manager + trackgentic-subordinate (3 skills with broken references) with a single trackgentic-implement skill (all agents) + issue skill (CTO only). Fewer skills = fewer broken references.
+  - When monitoring running agents: check session log line counts for growth, parse tail lines for agent activity (tool calls = working, text output = thinking/reporting, result event = finished). Agent sessions typically take 3-5 min for review tasks, 20-26 turns.
 
 gotchas:
   - No package.json in .claude/ directory — yaml-validator.ts imports js-yaml which needs install at runtime
@@ -202,6 +201,11 @@ gotchas:
   - "Token enforcement reads from .trackgentic/users.json (not env var) — the enforce-trackgentic-token.ts hook uses agent_type to look up the agent's registered token, strips any manual token from the command, and injects the correct one. No env var needed; no agent runner changes needed. The $TRACKGENTIC_TOKEN constant in agent system files is informational only."
   - "Hook placement strategy: project-wide enforcement hooks (token injection, issue cleanup) go in settings.json so they apply to all agents automatically without per-agent config. Agent-specific hooks (access control, expertise injection) stay in agent frontmatter since they need per-agent configuration. This avoids duplicating hook config across every agent file."
   - "The enforce-issue-cleanup.ts SubagentStop hook uses both `reason` (shown to the agent) and `systemMessage` (shown to the user) in its block output. Both fields work for SubagentStop just like Stop."
+  - "Agent runner orphan process risk: if run-agents.ts dies without SIGINT (e.g. piped through `head`, SIGPIPE), child claude processes become orphans (PPID 1) because the SIGINT handler never fires. These orphaned processes continue working on the same issue. Always check for orphaned claude agent processes before starting a new runner instance — duplicates will cause concurrent writes to the same trackgentic issue."
+  - "Session logs (.agentic/session/*.jsonl) use stream-json format — parse with `json.loads(line)` per line. Key types: 'assistant' (agent messages/tool calls), 'tool' (tool results), 'result' (final session result with cost_usd, duration_ms, num_turns). Monitor tail of these files to track agent progress."
+  - "Auto-promotion is dangerous for multi-phase flows: trackgentic auto-promotes parent status when children advance. This caused parent to go done before implementation tasks were created. The /issue skill now creates all tasks upfront to avoid needing re-engagement, but auto-promotion still causes cosmetic issues (parent marked done early). Library code should be updated to not auto-promote parent to done when children complete."
+  - "Issue assignment is critical for agent runner dispatch: the runner only dispatches agents for issues assigned to them. If the parent issue is assigned to the user instead of the CTO, the CTO never gets dispatched and the flow stops. The /issue skill now always assigns the parent to cto."
+  - "Deleted skills with dangling references are silently ignored — Claude Code doesn't error when a skill name in frontmatter doesn't match any SKILL.md. This means broken skill references go undetected. Always verify agent skill lists match existing skill directories after renames or deletions."
 
 open_questions: []
 
@@ -216,3 +220,5 @@ resolved:
   - "REMOVED: Session/logging infrastructure from old delegate skill — no more _conversation.jsonl, agent_logs, CRYPLATIVE_SESSION_ID, or reference.md."
   - "REMOVED: Direct delegation via delegate skill — replaced by trackgentic-based task assignment. Managers create issues and assign them; the agent runner picks up issues and launches agents. Project-wide hooks enforce token usage and issue cleanup."
   - "FIXED: trackgentic SKILL.md CLI syntax was out of sync with actual CLI — missing init command, missing users section, missing --path option on create, blockages --by variadic syntax unclear, and workflow guidelines had 3 overlapping contradictory versions. Verified all commands against `--help` output and rewrote to match. Also added explicit note that `create` takes title as positional arg (not --title flag) since agents were hitting errors using --title."
+  - "FIXED: Multi-phase flow failure — /issue skill only created review tasks, then stopped. CTO never re-engaged because (a) parent was assigned to user not cto, (b) auto-promotion marked parent done when reviews completed. Fix: /issue skill now creates ALL tasks upfront (reviews + implementation + quality) with blockages, assigns parent to cto. Consolidated worktask/trackgentic-manager/trackgentic-subordinate into trackgentic-implement + issue."
+  - "FIXED: Broken skill references — agents referenced deleted skills (trackgentic-manager, trackgentic-subordinate, worktask) silently. Cleaned up all agents to use trackgentic-implement (all) + issue (CTO only). Deleted worktask skill directory."

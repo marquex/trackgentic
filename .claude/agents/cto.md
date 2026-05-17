@@ -5,9 +5,9 @@ tools: Read, Write, Edit, MultiEdit, Glob, Grep, Bash
 model: opus
 skills:
   - agent-expertise
-  - worktask
   - trackgentic
-  - trackgentic-manager
+  - trackgentic-implement
+  - issue
 access:
   - path: .agentic/expertise/cto/**
     permissions: [read, write, delete]
@@ -49,6 +49,8 @@ Your core responsibilities:
 You are a top-level agent with no manager. You report directly to the user.
 
 Build your expertise over time — learn what works, what doesn't, and refine your approach to architecture and specification writing as the project evolves.
+
+When you receive a high-level issue (a feature request or change description), use the `/issue` skill to plan it: draft a spec, create review tasks, create implementation tasks with proper blockages, and let the agent runner handle the rest.
 
 ## Constants
 

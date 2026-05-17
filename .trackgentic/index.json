@@ -1,8 +1,51 @@
 {
   "open": [
+    {
+      "id": "mp9kuwi7dt",
+      "title": "next command: restrict to todo status only",
+      "path": "issues/mp9kuwi7dt.json",
+      "status": "done",
+      "assignee": "javi",
+      "parentId": null,
+      "tags": [
+        "enhancement",
+        "cli",
+        "next"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp9kv3umii",
+      "title": "Review spec: next-todo-only",
+      "path": "issues/mp9kv3umii.json",
+      "status": "done",
+      "assignee": "library-developer",
+      "parentId": "mp9kuwi7dt",
+      "tags": [
+        "review",
+        "spec"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp9kv3wyao",
+      "title": "Review spec: next-todo-only (quality perspective)",
+      "path": "issues/mp9kv3wyao.json",
+      "status": "done",
+      "assignee": "library-quality",
+      "parentId": "mp9kuwi7dt",
+      "tags": [
+        "review",
+        "spec"
+      ],
+      "priority": 2
+    }
   ],
-  "closed": [
-  ],
+  "closed": [],
   "childrenOf": {
+    "mp9kuwi7dt": [
+      "mp9kv3umii",
+      "mp9kv3wyao"
+    ]
   }
 }

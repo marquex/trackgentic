@@ -1,0 +1,58 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T09:33:27.395Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T09:33:27.395Z",
+    "author": "javi",
+    "content": {
+      "title": "Review spec: next-todo-only",
+      "description": "Review the draft spec at .agentic/specs/next-todo-only-spec.md\\n\\nAnalyze viability against the actual codebase. Comment with:\\n- Feasibility issues\\n- Missing edge cases\\n- Suggested API changes\\n- Implementation concerns\\n\\nDo NOT implement — only analyze and comment.",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "library-developer",
+      "parentId": "mp9kuwi7dt",
+      "tags": [
+        "review",
+        "spec"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T12:28:30.389Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T12:30:03.708Z",
+    "author": "library-developer",
+    "content": {
+      "id": "mp9r678jsh",
+      "content": "## Spec Review: `next` Command — Restrict to `todo` Status Only\n\n### Verdict: Feasible and well-scoped. A few concerns below.\n\n---\n\n### 1. Code Location — Confirmed Accurate\n\nThe spec correctly identifies the target. In `src/core/tracker.ts` line 546:\n```ts\nconst openStatuses: IssueStatus[] = [\"idea\", \"todo\", \"in-progress\"];\n```\nThis is indeed the single filter to change. Changing to `[\"todo\"]` is a one-liner as the spec states.\n\n---\n\n### 2. Feasibility Issues — None\n\nThe change is straightforward. No architectural concerns. The `next()` method already filters by `index.open`, so `done` and `closed` entries are handled correctly by the existing logic.\n\n---\n\n### 3. Missing Edge Cases\n\n**3a. Massive test impact not quantified in spec.** The spec says \"Existing tests that rely on the old status filter must be updated\" but doesn't flag the scale. I counted **10 out of 14 tests** in `tracker-next.test.ts` that create issues with default status `\"idea\"` (the `create()` default). After this change, all of these would return `NO_ISSUES_AVAILABLE` because `\"idea\"` would no longer be eligible. These tests all need their test data changed to explicitly set `status: \"todo\"`:\n\n- \"returns the highest-priority unblocked issue for a user\"\n- \"excludes issues with active blockages\"\n- \"uses impact score as tiebreaker when priorities are equal\"\n- \"returns NO_ISSUES_AVAILABLE when all matching issues are blocked\"\n- \"includes issues with only resolved blockages\"\n- \"uses id ASC as final tiebreaker when priority and impact are equal\"\n- \"case-sensitive assignee matching\"\n- \"returns full ComputedIssue with all expected fields\" (also asserts `result.status === \"idea\"` on line 230 which would never be possible)\n- \"does not consider issues assigned to other users\"\n\n**3b. The `NO_ISSUES_AVAILABLE` message change ripples.** The spec suggests changing the message to \"No todo issues found\" for clarity. Three tests assert the exact message string:\n```ts\nmessage: \"No unblocked issues found for user 'alice'.\"\n```\nThese assertions need updating too. Minor but should be tracked.\n\n---\n\n### 4. Suggested API Changes — None\n\nThe spec correctly identifies that no API changes are needed. Same method signature, same return type.\n\n---\n\n### 5. Implementation Concerns\n\n**5a. One test must be fundamentally rewritten, not just tweaked.** The test on line 181-194 is titled \"only includes idea, todo, and in-progress statuses\" and explicitly verifies that `idea`, `todo`, AND `in-progress` are ALL included. This test asserts the exact behavior being removed. It needs to be rewritten to verify the **opposite** — that `idea` and `in-progress` are now **excluded**.\n\n**5b. Comment in existing test needs update.** Line 143 has a comment `// Only 'Todo' should be eligible (idea/todo/in-progress only)` which would be misleading after the change. It should say `// Only 'Todo' should be eligible (todo only)` or similar.\n\n**5c. JSDoc on `next()` should be updated.** Line 511-512 says the method \"Filters open issues by assignee and active status\". After the change, this should clarify it only considers `todo` status.\n\n---\n\n### Summary\n\n- **Feasibility**: ✅ Fully feasible, genuinely a one-line change in production code\n- **Risk**: Low — well-isolated change, no API surface affected\n- **Test burden**: High — 10+ tests need data changes, 1 test needs full rewrite, 3 message assertions need updating\n- **Recommendation**: Proceed. The spec is accurate. Just be aware the test updates are more extensive than the \"single-line change\" framing suggests."
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T12:30:52.916Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9r79q0ba",
+      "content": "## Spec Review: next Command - Restrict to todo Status Only\n\n### Overall Assessment: Feasible - Trivial core change, clear intent, but test impact is larger than the spec suggests\n\n### Feasibility Issues\n\nNone critical. The core change is exactly one line in the next() method where the status filter is defined. Currently it is an array of three statuses (idea, todo, in-progress) and it would become just (todo). The openStatuses local is only used inside next(), no other method references it.\n\n### Missing Edge Cases\n\n1. **in-progress issues assigned to the user**: After this change, if a user has ONLY in-progress items, next() will return NO_ISSUES_AVAILABLE. This is the intended behavior (per spec rationale: already being worked on), but it means the command can no longer surface partially-done work. Consider whether users might want next to tell them they have nothing new to pick up but do have in-progress items. That is out of scope per spec, but worth noting as a potential follow-up.\n\n2. **Message accuracy**: The spec says to change the NO_ISSUES_AVAILABLE message to No todo issues found. However, the empty result can occur for two reasons: (a) no todo issues exist for the user, or (b) all todo issues are blocked. The current message mentions unblocked issues which captures the blockage dimension. Changing it to only mention todo loses information about blockages. Suggested: No unblocked todo issues found for user - accurate for both dimensions.\n\n3. **Default create status is idea**: Issues created without specifying status default to idea. After this change, newly-created issues will not appear in next() results until explicitly moved to todo. This is the desired workflow but is a behavioral breaking change for any existing user relying on next to surface freshly-created issues.\n\n### Implementation Concerns\n\n1. **Test impact is substantial**. The spec says update existing next tests but does not convey the full scope. I count about 11 tests in the next test suite that will break because they create issues without specifying status (defaulting to idea, which will no longer be eligible). One test explicitly validates the current 3-status behavior and must be completely rewritten. Another test asserts result.status is idea which needs both the create call and the assertion updated.\n\n2. **CLI command**: No changes needed since it just delegates to tracker.next().\n\n3. **No new files needed**. The change is confined to the tracker module and the test file.\n\n### Suggested API Changes\n\nNone required. The spec correctly identifies that the method signature and return type are unchanged. This is purely an internal filter change.\n\nOne minor suggestion: consider extracting the eligible statuses to a named constant rather than keeping it inline. This makes the intent self-documenting and easier to find. But this is optional since the current inline approach is fine for a single-value array.\n\n### Summary\n\nCore change: 1 line (filter) + 1 line (message). Test updates needed: about 11 tests. New tests needed: 1 explicit exclusion test for idea and in-progress. No API changes. Breaking behavior: yes, idea and in-progress issues no longer eligible. Risk level: low."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T12:31:00.919Z",
+    "author": "javi",
+    "content": {
+      "status": "done"
+    }
+  }
+]

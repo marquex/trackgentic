@@ -1,0 +1,66 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T09:33:27.487Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T09:33:27.487Z",
+    "author": "javi",
+    "content": {
+      "title": "Review spec: next-todo-only (quality perspective)",
+      "description": "Review the draft spec at .agentic/specs/next-todo-only-spec.md\\n\\nAnalyze from a testability and quality perspective. Comment with:\\n- Testability concerns\\n- Missing acceptance criteria\\n- Documentation requirements\\n- Edge cases that need coverage\\n\\nDo NOT implement — only analyze and comment.",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "library-quality",
+      "parentId": "mp9kuwi7dt",
+      "tags": [
+        "review",
+        "spec"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T12:28:34.808Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T12:28:44.080Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T12:30:06.656Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9r6a5jfr",
+      "content": "## Quality Review: `next` Command — Restrict to `todo` Status Only\n\n### Verdict: Spec is well-scoped with a few gaps to address\n\nOverall the spec is clear, focused, and correctly scoped. The single-line change description is accurate for the implementation, but the test impact is understated. Here's my detailed analysis:\n\n---\n\n### Testability Concerns\n\n1. **Test impact is larger than stated.** The spec says \"update existing next tests and add explicit exclusion tests\" but at minimum **3 existing tests will break**:\n   - **Line 181** (`\"only includes idea, todo, and in-progress statuses\"`) — This test explicitly verifies that `idea` and `in-progress` ARE eligible. It must be completely rewritten as an exclusion test.\n   - **Line 211** (`\"returns full ComputedIssue with all expected fields\"`) — Creates an issue **without specifying status** (defaults to `idea`). After the change, `next(\"alice\")` will return `NO_ISSUES_AVAILABLE` instead of the created issue. The assertion `expect(result.status).toBe(\"idea\")` (line 230) also contradicts the new behavior. Fix: add `status: \"todo\"` to the create call.\n   - **Lines 94, 109, 239** (NO_ISSUES_AVAILABLE message assertions) — The spec proposes changing the message from \"No unblocked issues found\" to \"No todo issues found\". All three tests assert the exact message string and must be updated.\n\n2. **Default status creates a subtle trap.** `create()` defaults to `status: \"idea\"`. After this change, any test that creates issues for `next()` without explicitly setting `status: \"todo\"` will silently fail. This is not a spec issue per se, but it's a test maintenance hazard worth noting.\n\n3. **The `openStatuses` constant could become misleading.** The variable name `openStatuses` on line 546 currently means \"actionable statuses.\" After narrowing to `[\"todo\"]`, the name no longer reflects its purpose. Consider renaming to `eligibleStatuses` or just inlining `status === \"todo\"` as the spec suggests.\n\n---\n\n### Missing Acceptance Criteria\n\n1. **Mixed-status scenario not specified.** What should happen when a user has both `todo` (priority 5) and `idea` (priority 1) issues? The spec implies the `idea` is ignored even though it has higher priority — this should be explicitly stated as an acceptance criterion.\n\n2. **Message semantics for blocked-todo-only scenario.** Currently when all candidates are blocked, the message says \"No unblocked issues found.\" After the change, if there ARE todo issues but they're all blocked, should the message be different from \"no todo issues at all\"? The spec changes the message universally, which conflates two different situations. Consider distinguishing:\n   - \"No todo issues found for user X\" (no todo issues exist)\n   - \"All todo issues for user X are blocked\" (todo issues exist but are blocked)\n\n3. **No criterion for the JSDoc update.** The method's JSDoc (line 509-511) says \"Filters open issues by assignee and active status\" — this should be updated to say \"Filters todo-status issues by assignee\" to match the new behavior.\n\n---\n\n### Edge Cases That Need Coverage\n\n1. **All issues are `idea` status** — should return NO_ISSUES_AVAILABLE\n2. **All issues are `in-progress` status** — should return NO_ISSUES_AVAILABLE\n3. **`todo` issue exists alongside higher-priority `idea` issue** — must return the `todo` issue, ignoring the `idea`\n4. **Single `todo` issue that is blocked** — returns NO_ISSUES_AVAILABLE with updated message\n5. **`todo` issue with resolved blockage** — should still be returned (regression guard)\n6. **Empty issue set** — returns NO_ISSUES_AVAILABLE (existing test covers this, but verify message changes)\n\n---\n\n### Documentation Requirements\n\n1. **JSDoc on `next()` method** (tracker.ts:508-524): Update description from \"active status\" to \"todo status\". The `@returns` tag and `@example` are fine.\n2. **`NextResult` type doc** (api.ts:96): The docstring \"the recommended issue to work on\" is still accurate, but could note it only considers todo-status issues.\n3. **No README changes needed** — the spec correctly scopes out CLI changes.\n\n---\n\n### Summary\n\nThe spec is solid and the change is well-contained. My main recommendations:\n- Explicitly call out the 3 breaking tests (not just \"update existing tests\")\n- Add an acceptance criterion for the mixed-status priority scenario\n- Consider whether the NO_ISSUES_AVAILABLE message should distinguish \"no todo issues\" from \"all todo issues blocked\"\n- Update the JSDoc description as part of the implementation"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T12:30:37.675Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9r6x3vas",
+      "content": "## Quality Review: `next` — Restrict to `todo` Status Only\n\n### Testability Concerns\n\n**Critical: Massive test breakage — spec understates scope by ~10x**\n\nThe spec says \"Existing tests that rely on the old status filter must be updated\" but the actual impact is far larger than just the one explicit status-filter test:\n\n`create()` defaults to `status: \"idea\"` (tracker.ts:280). Since the change removes `idea` from eligible statuses, **every test that creates issues without explicitly setting `status: \"todo\"` will break**.\n\n**Unit tests (`tracker-next.test.ts`) — 9 of 15 tests will fail:**\n- \"returns the highest-priority unblocked issue\" (line 32) — 3 issues, all default to `idea`\n- \"excludes issues with active blockages\" (line 50) — all default to `idea`\n- \"uses impact score as tiebreaker\" (line 69) — all default to `idea`\n- \"returns NO_ISSUES_AVAILABLE when all matching issues are blocked\" (line 100) — defaults to `idea`\n- \"includes issues with only resolved blockages\" (line 149) — defaults to `idea`\n- \"uses id ASC as final tiebreaker\" (line 167) — defaults to `idea`\n- \"only includes idea, todo, and in-progress statuses\" (line 181) — **entire test is wrong**, tests the OLD behavior\n- \"returns full ComputedIssue with all expected fields\" (line 211) — asserts `status: \"idea\"` on line 230\n- \"does not consider issues assigned to other users\" (line 245) — defaults to `idea`\n\n**CLI tests (`commands.test.ts`) — 4 of 6 tests will fail:**\n- \"returns the best issue for a user\" (line 888) — all default to `idea`\n- \"excludes blocked issues\" (line 905) — defaults to `idea`\n- \"resolved blockage treated as unblocked\" (line 960) — defaults to `idea`\n- \"excludes done and closed issues\" (line 946) — the `todo` issue works, but the message assertion may need updating\n\n**Total: ~13 tests need updating, not just the one test mentioned in the spec.**\n\n### Missing Acceptance Criteria\n\n1. **No test for `idea` exclusion**: \"Given user has only `idea` issues → returns NO_ISSUES_AVAILABLE\". Essential because `create()` defaults to `idea`, so this is the most common scenario.\n2. **No test for `in-progress` exclusion**: \"Given user has only `in-progress` issues → returns NO_ISSUES_AVAILABLE\"\n3. **No test for mixed-status scenario**: \"Given user has a `todo` (priority 5) + an `idea` (priority 1) → returns the `todo` issue (not the higher-priority `idea`)\"\n4. **No test for blocked `todo` + unblocked `idea`**: Should return NO_ISSUES_AVAILABLE, not fall back to the `idea`. Critical edge case.\n5. **`NO_ISSUES_AVAILABLE` message**: The spec puts \"No todo issues found\" in Implementation Notes (line 29) — this should be a formal requirement, not an implementation note. Message text is user-facing and should be specified with an exact assertion.\n\n### Documentation Requirements\n\n1. **JSDoc on `next()` method** (tracker.ts:518-524): Should explicitly state that only `todo` status issues are considered. Currently says nothing about status filtering.\n2. **JSDoc example** (tracker.ts:521): Shows calling `next()` after creating issues, but `create()` defaults to `idea` — the example would silently return NO_ISSUES_AVAILABLE after this change. The example should show creating a `todo` issue first.\n3. **`NextResult` type docs** (types/api.ts:97): Consider adding a doc comment noting the `todo`-only filter.\n\n### Edge Cases That Need Coverage\n\n1. **Blocked `todo` should not fall back to unblocked `idea`**: The `next()` command must NOT serve lower-quality results when its preferred pool (`todo`) is empty. This needs an explicit test.\n2. **Workflow impact**: After this change, `create()` → `next()` will always return NO_ISSUES_AVAILABLE unless an explicit `update` to `todo` is done in between. This is the intended behavior but represents a significant workflow change — should be documented.\n3. **`in-progress` issues belonging to the same user**: Currently returned by `next()`. After the change, they won't be. This could be surprising for users who relied on `next()` to show their in-flight work. Not a bug, but worth a comment in the spec.\n\n### Changed Files — Incomplete\n\nThe spec lists 2 categories but should be explicit about all 3 files:\n1. `src/core/tracker.ts` — line 546 (status filter)\n2. `tests/core/tracker/tracker-next.test.ts` — 9+ tests need `status: \"todo\"` on create\n3. `tests/cli/commands.test.ts` — 4+ tests need `--status todo` on create\n\n### Summary\n\nThe spec is clear in intent and the change itself is simple (one line). However, the spec significantly underestimates the blast radius on existing tests (13 tests vs implied 1-2). I'd recommend the implementor add explicit `status: \"todo\"` to all test creates and add 4 new targeted tests for the exclusion behavior before changing the filter."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T12:30:45.685Z",
+    "author": "javi",
+    "content": {
+      "status": "done"
+    }
+  }
+]

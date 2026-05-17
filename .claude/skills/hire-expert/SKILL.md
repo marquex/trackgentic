@@ -76,10 +76,8 @@ tools: Read, Grep, Glob
 model: {model — defaults to sonnet}
 skills:
   - agent-expertise
-  - worktask
   - trackgentic
-  - trackgentic-subordinate
-{if has subordinates:  - trackgentic-manager}
+  - trackgentic-implement
 subordinates: {list of subordinate agent names, or omit if none}
 access:
   - path: .agentic/expertise/{name}/**
@@ -126,7 +124,7 @@ Your manager is `{manager-name}` — you receive assigned tasks from it.
 
 ## Using trackgentic as the issue tracker
 
-You manage your work through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-subordinate` skill for best practices on how to pick up, execute, report, and hand back issues effectively.
+You manage your work through trackgentic issues. Use the `trackgentic` skill to create, update, and monitor issues. Follow the issue flow outlined in the `trackgentic-implement` skill for best practices on how to pick up, execute, report, and hand back issues effectively.
 
 IMPORTANT: Your trackgentic token is `<token-here>`.
 
@@ -139,8 +137,7 @@ You have access to the following folders:
 
 Key rules for the agent file:
 - The system prompt should be directional, not prescriptive. Let the agent build expertise on how to achieve its goals.
-- Always include the `agent-expertise`, `worktask`, `trackgentic`, and `trackgentic-subordinate` skills.
-- Include the `trackgentic-manager` skill if the agent has subordinates.
+- Always include the `agent-expertise`, `trackgentic`, and `trackgentic-implement` skills. Manager agents should also include `issue`.
 - Only include `Write` and `Edit` in the `tools` list if the agent needs to write to files outside its expertise folder. Most expert agents only need read access to their domain files.
 - Always include the `PreToolUse` hook for `enforce-agent-access.ts`.
 - Always include the `SessionStart`, `UserPromptSubmit`, and `Stop` hooks for `expertise.hook.ts`. These handle expertise injection at session start and expertise update reminders at session end. The hook uses flag-based dedup so double-firing is safe.
@@ -169,7 +166,6 @@ If the new agent has a manager, you must update the manager's agent file to incl
 1. Read the manager's agent file at `.claude/agents/{manager-name}.md`.
 2. In the YAML frontmatter:
    - Add the new agent to the `subordinates` list (create the list if it doesn't exist).
-   - Add the `trackgentic-manager` skill to the `skills` list (if not already present).
 3. In the system prompt:
    - If there is already a `## Coordinating Work` section, no change needed — the agent already knows how to assign issues.
    - If there is no `## Coordinating Work` section, add one before the `## Restricted domain` section with instructions for creating trackgentic issues for subordinates.

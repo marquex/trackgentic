@@ -235,7 +235,7 @@ learnings:
     - "Self-block test: detectCycle catches A blocked by A — the BFS starts at blockerId which equals blockedId, immediately returns true."
   phase_7_next_command:
     - "`next <user-name>` is a read-only suggestion command — no mutations, no events appended."
-    - "Filtering logic: only idea/todo/in-progress statuses eligible (done/closed excluded). Only issues assigned to the given user. Only issues with NO active blockages (resolved blockages are OK)."
+    - "Filtering logic: CURRENTLY idea/todo/in-progress statuses eligible (done/closed excluded). PENDING CHANGE: spec reviewed to narrow to todo-only (mp9kv3wyao)."
     - "Sort order: priority ASC → impact score DESC → id ASC (age). Same as list() sort but with the additional blocked-issues filter."
     - "Returns NO_ISSUES_AVAILABLE (result code, not error) when no matching issues — exit code 0, not an error."
     - "Case-sensitive assignee matching — 'alice' != 'Alice'. This is intentional."
@@ -244,3 +244,12 @@ learnings:
     - "tracker.ts grew from 1329 to 1734 lines with the next() method addition."
     - "cli/commands/next.ts is 22 lines — thin wrapper that calls tracker.next() and outputs JSON."
     - "cli/runner.ts grew from 164 to 171 lines with next subcommand registration."
+  spec_review_next_todo_only:
+    - "Spec reviewed (mp9kv3wyao): change next() to filter to todo-only status instead of idea/todo/in-progress."
+    - "CRITICAL finding: create() defaults to status='idea' (tracker.ts:280). After the change, ~13 of 20 tests will break because they create issues without explicit status and rely on idea being eligible."
+    - "Blast radius: 9 unit tests (tracker-next.test.ts) + 4 CLI tests (commands.test.ts) need status: 'todo' on all create calls."
+    - "The test 'only includes idea, todo, and in-progress statuses' (line 181) must be completely rewritten — tests OLD behavior."
+    - "Missing acceptance tests needed: (1) only idea issues → NO_ISSUES_AVAILABLE, (2) only in-progress → NO_ISSUES_AVAILABLE, (3) mixed statuses only picks todo, (4) blocked todo + unblocked idea → NO_ISSUES_AVAILABLE (no fallback)."
+    - "NO_ISSUES_AVAILABLE message change should be a requirement, not just an implementation note."
+    - "JSDoc on next() and the example code need updating to document todo-only behavior."
+    - "Key pattern: when reviewing specs that change default behavior, always check what the current tests rely on as defaults — the blast radius is often larger than the spec author expects."
