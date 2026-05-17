@@ -43,7 +43,11 @@
       "Bash(bun .claude/skills/**)",
       "Write(.claude/**)",
       "Edit(.claude/**)",
-      "MultiEdit(.claude/**)"
+      "MultiEdit(.claude/**)",
+      "Bash(trackgentic *)",
+      "Bash(TRACKGENTIC_USER_TOKEN=* trackgentic *)",
+      "Bash(cd packages/library && bun run *)",
+      "Bash(cd packages/library && bun test *)"
     ]
   }
 }

@@ -6,7 +6,7 @@ hierarchy:
   manager: cto
   subordinates: [none — leaf agent]
 
-expertise_status: "Active — Phases 1-7 in progress. 569 tests, 1997 assertions, 98.46% tracker.ts line coverage. Prettier + ESLint tooling. Tests refactored into focused per-feature files. Phase 7: `next <user-name>` command validated (20 tests)."
+expertise_status: "Active — Phases 1-7 in progress. 569 tests, 1997 assertions, 98.46% tracker.ts line coverage. Prettier + ESLint tooling. Tests refactored into focused per-feature files. Phase 7: `next <user-name>` command validated (20 tests). Spec review: cap-upward-promotion (mp9xemy1j3) — 2 critical ambiguities found, 9+ tests to update, 7+ new tests needed."
 
 project_phases:
   phase_1_foundation:
@@ -253,3 +253,28 @@ learnings:
     - "NO_ISSUES_AVAILABLE message change should be a requirement, not just an implementation note."
     - "JSDoc on next() and the example code need updating to document todo-only behavior."
     - "Key pattern: when reviewing specs that change default behavior, always check what the current tests rely on as defaults — the blast radius is often larger than the spec author expects."
+  spec_review_cap_upward_promotion:
+    issue: "mp9xemy1j3 (parent: mp9xefucmo)"
+    change: "Cap upward auto-promotion at `in-progress` — parents never auto-promoted to done/closed via computeUpwardPromotions."
+    affected_function: "computeUpwardPromotions in hierarchy.ts (106 lines)"
+    call_sites: "2 in tracker.ts — status change (line ~810) and reparent (line ~779)"
+    critical_ambiguities:
+      - "Reason string: when child→done and parent is capped at in-progress, does the reason say 'child advanced to done' (misleading) or a new format like 'auto-promoted to in-progress: child advanced to done'?"
+      - "Multi-level propagation: does the ORIGINAL child status (done) or the CAPPED status (in-progress) propagate to grandparents? This determines whether a grandparent of a done child gets promoted to in-progress or stays where it is."
+    test_blast_radius:
+      hierarchy_test_ts: "4-5 tests in computeUpwardPromotions block need updates (lines ~236-304)"
+      tracker_hierarchy_test_ts: "3 tests need updates — 'child→done parent auto-promoted' (298), 'multi-level' (312), 'reparent upward constraint' (468)"
+      tracker_test_ts_monolithic: "3 same tests in deprecated monolith need updates"
+      total_existing_tests_to_update: "9+"
+    new_tests_needed:
+      - "child→done, parent at in-progress → no promotion event (key new behavior)"
+      - "child→done, parent at idea → promoted to in-progress (not done)"
+      - "child→done, parent at todo → promoted to in-progress (not done)"
+      - "child→closed, parent at idea → promoted to in-progress (closed also capped)"
+      - "child→closed, parent at in-progress → no promotion (capped = current)"
+      - "reparent done child to idea parent → promoted to in-progress (not done)"
+      - "explicit parent→done still works (requirement #4 — manual transitions unaffected)"
+    documentation_needs:
+      - "JSDoc on computeUpwardPromotions needs cap mention"
+      - "Event reason field format needs specification (user-visible via history command)"
+    key_pattern: "When capping a propagated value, always clarify what propagates FURTHER up the chain — the original or the capped value. This is a common source of bugs in recursive systems."

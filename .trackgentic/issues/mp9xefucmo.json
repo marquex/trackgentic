@@ -1,0 +1,59 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T15:24:24.076Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:24:24.076Z",
+    "author": "javi",
+    "content": {
+      "title": "Cap upward auto-promotion at in-progress",
+      "description": "Spec: .agentic/specs/cap-upward-promotion-spec.md\n\nWhen all children of a parent reach 'done', the parent is currently auto-promoted to 'done'. This prevents the managing agent from creating more children. Cap upward auto-promotion at 'in-progress' so parents never auto-promote to done/closed.",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "cto",
+      "tags": [
+        "hierarchy",
+        "core",
+        "promotion"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:25:14.836Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:32:42.515Z",
+    "author": "system",
+    "content": {
+      "status": "done",
+      "reason": "auto-promoted: child advanced to 'done'"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:37:01.008Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9xun7895",
+      "content": "Progress update: Quality review (mp9xemy1j3) DONE with excellent feedback on reason strings, multi-level semantics, and test coverage. All concerns addressed in spec update. Developer review (mp9xemq9mv) IN-PROGRESS waiting for library-developer. Implementation (mp9xevrbwj) BLOCKED by developer review. Validation (mp9xev4b6c) BLOCKED by implementation. Spec updated to REVIEWED status with clarifications section. No blockers on my end."
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:38:01.639Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9xvxhmkm",
+      "content": "Both reviews complete. Developer review (mp9xemq9mv) confirms: viable, well-scoped, ~5 lines of code change, 7 tests need updating, reparenting path implicitly covered. Quality review (mp9xemy1j3) concerns all addressed in spec update. Implementation (mp9xevrbwj) is now UNBLOCKED — both review blockages resolved. Ready for runner to pick up implementation."
+    }
+  }
+]

@@ -1,26 +1,26 @@
 {
   "open": [
     {
-      "id": "mp9kuwi7dt",
-      "title": "next command: restrict to todo status only",
-      "path": "issues/mp9kuwi7dt.json",
+      "id": "mp9xefucmo",
+      "title": "Cap upward auto-promotion at in-progress",
+      "path": "issues/mp9xefucmo.json",
       "status": "done",
-      "assignee": "javi",
+      "assignee": "cto",
       "parentId": null,
       "tags": [
-        "enhancement",
-        "cli",
-        "next"
+        "hierarchy",
+        "core",
+        "promotion"
       ],
       "priority": 2
     },
     {
-      "id": "mp9kv3umii",
-      "title": "Review spec: next-todo-only",
-      "path": "issues/mp9kv3umii.json",
+      "id": "mp9xemq9mv",
+      "title": "Review spec: cap-upward-promotion",
+      "path": "issues/mp9xemq9mv.json",
       "status": "done",
-      "assignee": "library-developer",
-      "parentId": "mp9kuwi7dt",
+      "assignee": "cto",
+      "parentId": "mp9xefucmo",
       "tags": [
         "review",
         "spec"
@@ -28,24 +28,53 @@
       "priority": 2
     },
     {
-      "id": "mp9kv3wyao",
-      "title": "Review spec: next-todo-only (quality perspective)",
-      "path": "issues/mp9kv3wyao.json",
+      "id": "mp9xemy1j3",
+      "title": "Review spec: cap-upward-promotion (quality perspective)",
+      "path": "issues/mp9xemy1j3.json",
       "status": "done",
-      "assignee": "library-quality",
-      "parentId": "mp9kuwi7dt",
+      "assignee": "cto",
+      "parentId": "mp9xefucmo",
       "tags": [
         "review",
         "spec"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp9xev4b6c",
+      "title": "Validate: cap upward auto-promotion at in-progress",
+      "path": "issues/mp9xev4b6c.json",
+      "status": "done",
+      "assignee": "cto",
+      "parentId": "mp9xefucmo",
+      "tags": [
+        "hierarchy",
+        "core",
+        "validation"
+      ],
+      "priority": 2
+    },
+    {
+      "id": "mp9xevrbwj",
+      "title": "Implement: cap upward auto-promotion at in-progress",
+      "path": "issues/mp9xevrbwj.json",
+      "status": "done",
+      "assignee": "javi",
+      "parentId": "mp9xefucmo",
+      "tags": [
+        "hierarchy",
+        "core"
       ],
       "priority": 2
     }
   ],
   "closed": [],
   "childrenOf": {
-    "mp9kuwi7dt": [
-      "mp9kv3umii",
-      "mp9kv3wyao"
+    "mp9xefucmo": [
+      "mp9xemq9mv",
+      "mp9xemy1j3",
+      "mp9xevrbwj",
+      "mp9xev4b6c"
     ]
   }
 }

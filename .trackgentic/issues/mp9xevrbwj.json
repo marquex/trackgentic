@@ -1,0 +1,93 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T15:24:45.681Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:24:45.681Z",
+    "author": "javi",
+    "content": {
+      "title": "Implement: cap upward auto-promotion at in-progress",
+      "description": "Spec: .agentic/specs/cap-upward-promotion-spec.md\n\nRead the spec AND the review comments on issues mp9xemq9mv and mp9xemy1j3 before starting. The reviews contain critical feedback about feasibility, edge cases, and test impact.\n\nImplement the change to computeUpwardPromotions in hierarchy.ts to cap the promoted status at 'in-progress'. Update all existing tests that assert parents auto-promote to 'done' or 'closed'.",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "library-developer",
+      "parentId": "mp9xefucmo",
+      "tags": [
+        "hierarchy",
+        "core"
+      ]
+    }
+  },
+  {
+    "type": "blockage-added",
+    "timestamp": "2026-05-17T15:24:58.685Z",
+    "author": "javi",
+    "content": {
+      "blockerId": "mp9xemq9mv"
+    }
+  },
+  {
+    "type": "blockage-added",
+    "timestamp": "2026-05-17T15:24:58.686Z",
+    "author": "javi",
+    "content": {
+      "blockerId": "mp9xemy1j3"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:25:10.997Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9xff98sq",
+      "content": "Key files: packages/library/src/core/hierarchy.ts (computeUpwardPromotions function, line ~68), packages/library/src/types/event.ts (Event types).\n\nThe function walks up the parent chain and promotes each parent to the child's status. Change: cap the promoted status at in-progress. Use STATUS_ORDER to compute min(childStatus, in-progress).\n\nCritical tests to update: hierarchy.test.ts lines 240-299 (upward promotion unit tests), tracker.test.ts lines 2067-2110 (integration tests for child-done-promotes-parent). The multi-level cascade test at line 2081 is the most complex — after the change, no level should reach done via auto-promotion.\n\nGuard constraint tests (parent → done requires children done) should remain unchanged — those test explicit transitions, not auto-promotion."
+    }
+  },
+  {
+    "type": "blockage-resolved",
+    "timestamp": "2026-05-17T15:32:42.516Z",
+    "author": "system",
+    "content": {
+      "blockerId": "mp9xemy1j3",
+      "reason": "Blocker issue mp9xemy1j3 transitioned to done"
+    }
+  },
+  {
+    "type": "blockage-resolved",
+    "timestamp": "2026-05-17T15:35:46.766Z",
+    "author": "system",
+    "content": {
+      "blockerId": "mp9xemq9mv",
+      "reason": "Blocker issue mp9xemq9mv transitioned to done"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:37:42.277Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:53:02.374Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9yf866k3",
+      "content": "Done"
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:53:08.897Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "javi"
+    }
+  }
+]

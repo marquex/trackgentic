@@ -36,7 +36,7 @@ current_state:
     linting: ESLint ^9.28 + typescript-eslint ^8.33 (replaced Biome), zero errors
     formatting: Prettier ^3.5.3 (replaced Biome formatter), zero issues
     typechecking: TypeScript strict + 4 extra flags, zero errors
-    testing: Bun test runner with coverage, 549 tests, 1948 assertions
+    testing: Bun test runner with coverage, 569 tests, 1997 assertions, 100% tracker.ts line coverage
     documentation: TypeDoc parses cleanly
     status: fully implemented — all quality gates passing
     test_helpers: setup.ts, fixtures.ts, assertions.ts created in tests/helpers/
@@ -173,7 +173,7 @@ current_state:
       - Impact score counts active blocks entries — used in list sort (priority ASC → impact DESC → id ASC)
       - BLOCKAGE_CYCLE error (exit code 11) prevents operation entirely, no partial state changes
     spec: .agentic/specs/07-phase6-blockages-spec.md
-  last_updated: "2026-05-11"
+  last_updated: "2026-05-17"
   phase_6_complete_date: "2026-05-10"
   phase_7_start_date: "2026-05-11"
   phase_7_complete_date: "2026-05-11"
@@ -191,7 +191,29 @@ current_state:
       package_json: "Updated: main→dist/index.cjs, module→dist/index.js, types→dist/index.d.ts, dual exports, bin→dist/bin.js, files→dist/, engines→node>=20"
       node_compat_audit: "No Bun-specific APIs found — codebase already uses node:fs/promises, node:fs, node:path"
       dist_output: "index.js, index.cjs, index.d.ts, index.d.cts, bin.js + sourcemaps"
-      verification: "549 tests, 1950 assertions, typecheck clean, lint clean. CJS+ESM imports verified. CLI binary e2e verified (init, create, list, view)"
+      verification: "569 tests, 1997 assertions, typecheck clean, lint clean. CJS+ESM imports verified. CLI binary e2e verified (init, create, list, view)"
+    next_command:
+      spec: .agentic/specs/next-command-spec.md
+      issue: mp3rc7femf
+      status: complete
+      description: "`next <user-name>` command — returns single best issue to work on for a given user"
+      results: "569 tests, 1997 assertions, 100% tracker.ts line coverage. 20 new tests (14 unit + 6 CLI) added by library-quality."
+    agent_runner:
+      status: live
+      description: "CTO and subordinates receive issues via /trackgentic-implement skill. Status-based workflow enforced."
+      tested: "CTO processed mp9xefucmo — spec update, review coordination, delegation to subordinates."
+    current_work:
+      cap_upward_promotion:
+        issue: mp9xefucmo
+        status: in-progress
+        spec: .agentic/specs/cap-upward-promotion-spec.md
+        spec_status: REVIEWED
+        description: "Cap upward auto-promotion at in-progress — parents never auto-promote to done/closed"
+        children:
+          mp9xemq9mv: "Dev review — done"
+          mp9xemy1j3: "Quality review — done"
+          mp9xevrbwj: "Implementation — todo, unblocked"
+          mp9xev4b6c: "Validation — todo, blocked by implementation"
     docs_status: "TypeDoc HTML output configured. typedoc-plugin-markdown removed from config (still in devDeps). docs script added. bun run docs generates docs-html/ with full API docs (classes, interfaces, types, search)."
     publish_pipeline:
       typedoc_html: complete
@@ -242,7 +264,7 @@ implementation_roadmap:
       status: complete
       notes: "All 4 tasks done. JSDoc on all public exports. Error messages polished (backtick IDs, consistent format). 21 new tests (18 edge cases + 3 package config). prepublishOnly script added. 549 total tests, 1948 assertions."
   phase_7_results:
-    tests: 549 passing, 1948 assertions
+    tests: 569 passing, 1997 assertions
     typecheck: clean (strict + 4 extra flags)
     lint: clean (ESLint, zero errors)
     format: clean (Prettier, zero issues)

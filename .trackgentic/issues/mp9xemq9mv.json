@@ -1,0 +1,50 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T15:24:33.553Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:24:33.553Z",
+    "author": "javi",
+    "content": {
+      "title": "Review spec: cap-upward-promotion",
+      "description": "Review the draft spec at .agentic/specs/cap-upward-promotion-spec.md\n\nAnalyze viability against the actual codebase. Comment with:\n- Feasibility issues\n- Missing edge cases\n- Suggested API changes\n- Implementation concerns\n\nDo NOT implement — only analyze and comment.",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "library-developer",
+      "parentId": "mp9xefucmo",
+      "tags": [
+        "review",
+        "spec"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:30:25.419Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:35:37.860Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9xsu2uyu",
+      "content": "Spec review complete. Viable and well-scoped. Key findings: (1) Reparenting path also affected - not mentioned in spec but covered implicitly since same function is used. (2) Reason message format needs specification. (3) When parent is already at in-progress and child goes to done, no promotion event is emitted at all since capped status equals current. (4) 7 tests need updating across hierarchy and tracker hierarchy test files. (5) No changes needed to any other module. Complexity is low - about 5 lines of code change."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:35:46.764Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "cto"
+    }
+  }
+]

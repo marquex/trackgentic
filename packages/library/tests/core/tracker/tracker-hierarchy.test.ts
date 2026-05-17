@@ -290,22 +290,32 @@ describe("Tracker", () => {
         if (lastEvent.type === "update") {
           expect(lastEvent.author).toBe("system");
           expect(lastEvent.content.status).toBe("in-progress");
-          expect(lastEvent.content.reason).toBe("auto-promoted: child advanced to 'in-progress'");
+          expect(lastEvent.content.reason).toBe("auto-promoted to 'in-progress': child advanced to 'in-progress'");
         }
       }
     });
 
-    test("child → done when parent is in-progress — parent auto-promoted", async () => {
+    test("child → done when parent is in-progress — parent stays at in-progress (cap)", async () => {
       const parent = await tracker.create({ title: "Parent", status: "in-progress" });
       if (!("id" in parent)) throw new Error("Parent create failed");
       const child = await tracker.create({ title: "Child", parentId: parent.id, status: "todo" });
       if (!("id" in child)) throw new Error("Child create failed");
 
+      const parentHistoryBefore = await tracker.history(parent.id);
+      const eventCountBefore = Array.isArray(parentHistoryBefore) ? parentHistoryBefore.length : 0;
+
       await tracker.update(child.id, { status: "done" });
 
+      // Parent should stay at in-progress — capped, no promotion event
       const parentView = await tracker.view(parent.id);
       if ("status" in parentView) {
-        expect(parentView.status).toBe("done");
+        expect(parentView.status).toBe("in-progress");
+      }
+
+      // No new system events on parent
+      const parentHistoryAfter = await tracker.history(parent.id);
+      if (Array.isArray(parentHistoryAfter)) {
+        expect(parentHistoryAfter).toHaveLength(eventCountBefore);
       }
     });
 
@@ -327,16 +337,16 @@ describe("Tracker", () => {
 
       await tracker.update(grandchild.id, { status: "done" });
 
-      // Parent should be auto-promoted to done
+      // Parent should be auto-promoted to in-progress (capped)
       const parentView = await tracker.view(parent.id);
       if ("status" in parentView) {
-        expect(parentView.status).toBe("done");
+        expect(parentView.status).toBe("in-progress");
       }
 
-      // Grandparent should be auto-promoted to done
+      // Grandparent should be auto-promoted to in-progress (capped)
       const grandparentView = await tracker.view(grandparent.id);
       if ("status" in grandparentView) {
-        expect(grandparentView.status).toBe("done");
+        expect(grandparentView.status).toBe("in-progress");
       }
     });
 
@@ -479,10 +489,10 @@ describe("Tracker", () => {
 
       await tracker.update(child.id, { parentId: newParent.id });
 
-      // New parent should be auto-promoted to done
+      // New parent should be auto-promoted to in-progress (capped)
       const newParentView = await tracker.view(newParent.id);
       if ("status" in newParentView) {
-        expect(newParentView.status).toBe("done");
+        expect(newParentView.status).toBe("in-progress");
       }
 
       // Verify system event in new parent's history
@@ -492,7 +502,7 @@ describe("Tracker", () => {
         expect(lastEvent.type).toBe("update");
         if (lastEvent.type === "update") {
           expect(lastEvent.author).toBe("system");
-          expect(lastEvent.content.status).toBe("done");
+          expect(lastEvent.content.status).toBe("in-progress");
         }
       }
     });

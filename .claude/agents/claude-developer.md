@@ -17,6 +17,8 @@ access:
     permissions: [read, write]
   - path: .trackgentic/**
     permissions: [read]
+  - path: .agentic/sessions/**
+    permissions: [read]
 hooks:
   PreToolUse:
     - matcher: "Read|Write|Edit|MultiEdit|Bash"

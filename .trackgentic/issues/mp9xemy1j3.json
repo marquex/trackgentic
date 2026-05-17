@@ -1,0 +1,59 @@
+[
+  {
+    "type": "creation",
+    "timestamp": "2026-05-17T15:24:33.647Z",
+    "author": "javi"
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:24:33.647Z",
+    "author": "javi",
+    "content": {
+      "title": "Review spec: cap-upward-promotion (quality perspective)",
+      "description": "Review the draft spec at .agentic/specs/cap-upward-promotion-spec.md\n\nAnalyze from a testability and quality perspective. Comment with:\n- Testability concerns\n- Missing acceptance criteria\n- Documentation requirements\n- Edge cases that need coverage\n\nDo NOT implement — only analyze and comment.",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "library-quality",
+      "parentId": "mp9xefucmo",
+      "tags": [
+        "review",
+        "spec"
+      ]
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:30:27.887Z",
+    "author": "javi",
+    "content": {
+      "status": "in-progress"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:32:32.348Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9xoved4v",
+      "content": "## Spec Review: Cap Upward Auto-Promotion at `in-progress` (Quality Perspective)\n\n### Testability Assessment: GOOD\n\nThe spec is well-structured for testing. The core change is localized to a single pure function (`computeUpwardPromotions` in hierarchy.ts), which is already tested in isolation (6 tests in hierarchy.test.ts) and via integration (7 tests in tracker-hierarchy.test.ts). The dual call sites in tracker.ts (status change at line 810, reparent at line 779) are both covered by existing tests.\n\n### Missing Acceptance Criteria\n\n1. **Reason string behavior when promotion is capped**: Currently the event reason says `auto-promoted: child advanced to 'done'`. After capping, if the child goes to `done` and the parent is promoted to `in-progress`, what does the reason say? The spec should clarify whether:\n   - The reason reflects the **capped status** (`auto-promoted: child advanced to 'in-progress'` — but that's misleading since the child didn't go to in-progress)\n   - The reason reflects the **child's actual status** (`auto-promoted: child advanced to 'done'` — but the parent was promoted to in-progress, not done, which is confusing)\n   - A new reason format is needed, e.g. `auto-promoted to 'in-progress': child advanced to 'done'` (shows both the target status and the trigger)\n\n2. **Capping when parent is already at `in-progress`**: If child → `done` and parent is already `in-progress`, the capped promotion status is `in-progress` which equals the parent. Should `isStatusAfter(cappedStatus, parentStatus)` return false (no promotion event) or should the parent still get a system event? The spec implies no promotion occurs, but this should be explicit.\n\n3. **Multi-level capping behavior**: Consider a 3-level tree: grandparent (idea) → parent (todo) → child (done). With capping:\n   - Parent gets promoted to `in-progress` (capped from done)\n   - Grandparent gets promoted to... `in-progress` (since the parent's effective promotion was in-progress)?\n   \n   The spec says \"The function uses `isStatusAfter(childStatus, parentStatus)` to decide whether to promote\" — but after capping, what's passed up to the grandparent? The **original child status** (done) or the **capped status** (in-progress)? This is the most critical ambiguity. The implementation note says \"use that capped status for both the `isStatusAfter` check and the event content\" but the function signature takes `childStatus` as a parameter — is it capped once at the entry point, or does each level re-cap?\n\n### Edge Cases That Need Coverage\n\n1. **Child → `closed` with parent at `todo`**: Closed is past in-progress, so the cap should promote parent to `in-progress` only. Need explicit test.\n\n2. **Child → `done` with parent already at `in-progress`**: Capped status equals parent status. No promotion event should be generated. This is a key regression test.\n\n3. **Child → `done` with parent at `idea`**: Should promote to `in-progress` (not done, not todo). Currently promotes to `done`. Need test for each parent starting status: idea, todo, in-progress, done, closed.\n\n4. **Reparent a `done` child to an `idea` parent**: The reparent call site (tracker.ts:779) also triggers `computeUpwardPromotions`. After the change, the parent should be promoted to `in-progress`, not `done`. The existing test \"reparent with upward constraint — parent auto-promoted\" (tracker-hierarchy.test.ts:468) currently expects `done` and will break.\n\n5. **Reparent a `closed` child**: Even more extreme — closed is past done, so with capping the parent goes to `in-progress`. No existing test covers reparenting a closed child.\n\n6. **Concurrent upward + downward**: If a parent is closed manually (downward cascade) and then the cascade triggers upward promotion somehow — is this possible? The spec says downward is unchanged, but a test confirming the interaction would be valuable.\n\n7. **Status order boundary**: What happens with statuses that are not in the standard progression? The spec assumes only standard statuses, but a defensive test with the exact STATUS_ORDER array would document this assumption.\n\n### Documentation Requirements\n\n1. **JSDoc on `computeUpwardPromotions`**: The current JSDoc says \"Auto-promote parent if child's new status is past parent's status.\" This needs to be updated to mention the cap: \"Auto-promote parent to at most `in-progress` if child's new status is past parent's status. Parents are never auto-promoted to `done` or `closed`.\"\n\n2. **Event reason documentation**: The `reason` field in system-generated events is user-visible (via `trackgentic history`). The new format should be documented and consistent.\n\n3. **Public API docs**: If `computeUpwardPromotions` is exported (it is — used by tracker.ts), its contract change should be noted in any CHANGELOG or migration guide.\n\n### Test Update Plan (Blast Radius)\n\n**hierarchy.test.ts** — 6 tests in `computeUpwardPromotions` describe block:\n- \"child ahead of parent returns one promotion\" (line 236): Child is `done`, parent is `in-progress`. After capping, promoted status = `in-progress` = parent status → NO promotion event. Test needs to expect empty result, or change parent status to `idea`/`todo`.\n- \"multi-level: grandchild promotes child promotes parent\" (line 252): Both levels currently expect `done`. After capping, both should expect `in-progress`.\n- \"stops when parent status is already at or past child\" (line 272): Parent gets promoted to `done` → capped to `in-progress`. Grandparent is `closed` so stops. Need to update expected promotion status.\n- \"stops when parent has no parent\" (line 285): Parent at `todo`, child `done`. Promoted to `in-progress` (capped). Update expected.\n- \"findEntry returns null\" (line 295): Parent at `idea`, child `done`. Promoted to `in-progress` (capped). Update expected.\n- \"child behind parent\" and \"child equal to parent\" — these should remain unchanged.\n\n**tracker-hierarchy.test.ts** — 3 upward promotion tests:\n- \"child → done when parent is in-progress — parent auto-promoted\" (line 298): Parent is `in-progress`, child → `done`. After capping, parent stays at `in-progress` (capped status = parent status). This test may need to change parent starting status to `idea` or `todo` to remain meaningful.\n- \"multi-level: grandchild → done → child promoted → parent promoted\" (line 312): Both levels expect `done`. Both should expect `in-progress`.\n- \"reparent with upward constraint — parent auto-promoted\" (line 468): Reparent a `done` child to `todo` parent. Currently expects `done`. Should expect `in-progress`.\n\n**tracker.test.ts** (monolithic — deprecated but still exists): Same 3 tests exist there and need the same updates.\n\n### Additional Test Cases to ADD (not just update)\n\n1. `child → done, parent at in-progress → no promotion event` (the key new behavior)\n2. `child → done, parent at idea → promoted to in-progress` (not done)\n3. `child → done, parent at todo → promoted to in-progress` (not done)\n4. `child → closed, parent at idea → promoted to in-progress` (closed also capped)\n5. `child → closed, parent at in-progress → no promotion` (capped = current)\n6. `reparent done child to idea parent → promoted to in-progress` (not done)\n7. `explicit parent → done still works` (requirement #4 — manual transitions unaffected)\n\n### Summary\n\nThe spec is clear in intent and well-scoped. The main risk is:\n1. **Ambiguity in reason strings** when the promoted status differs from the child's actual status\n2. **Multi-level propagation semantics** — whether the original child status or the capped status propagates upward\n3. **Large test blast radius** — 9+ existing tests need updates, and 7+ new tests should be added\n\nRecommendation: Before implementation begins, clarify items #1 and #2 from \"Missing Acceptance Criteria\" above. Everything else is actionable as-is."
+    }
+  },
+  {
+    "type": "update",
+    "timestamp": "2026-05-17T15:32:42.513Z",
+    "author": "javi",
+    "content": {
+      "status": "done",
+      "assignee": "cto"
+    }
+  },
+  {
+    "type": "comment",
+    "timestamp": "2026-05-17T15:36:53.744Z",
+    "author": "javi",
+    "content": {
+      "id": "mp9xuh0yvi",
+      "content": "Excellent review. All three concerns addressed in the updated spec: 1) Reason strings: auto-promoted to target-status colon child advanced to child-status. 2) Parent already at in-progress: no promotion event when capped status equals parent status. 3) Multi-level propagation: each level applies the cap independently. 4) Seven additional test cases added as required table in spec. Spec status updated from DRAFT to REVIEWED."
+    }
+  }
+]

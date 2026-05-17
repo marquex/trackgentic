@@ -234,7 +234,7 @@ describe("Hierarchy", () => {
     });
 
     test("child ahead of parent returns one promotion", () => {
-      const parent = makeEntry({ id: "parent00001", status: "in-progress" });
+      const parent = makeEntry({ id: "parent00001", status: "todo" });
       const index = makeIndex([parent]);
 
       const result = computeUpwardPromotions(index, parent, "done", (id) => findEntry(index, id));
@@ -243,10 +243,54 @@ describe("Hierarchy", () => {
       expect(result[0].issueId).toBe("parent00001");
       expect(result[0].event.type).toBe("update");
       if (result[0].event.type === "update") {
-        expect(result[0].event.content.status).toBe("done");
+        expect(result[0].event.content.status).toBe("in-progress");
         expect(result[0].event.author).toBe("system");
-        expect(result[0].event.content.reason).toBe("auto-promoted: child advanced to 'done'");
+        expect(result[0].event.content.reason).toBe("auto-promoted to 'in-progress': child advanced to 'done'");
       }
+    });
+
+    test("cap at in-progress — parent at in-progress, child done — no promotion", () => {
+      const parent = makeEntry({ id: "parent00001", status: "in-progress" });
+      const index = makeIndex([parent]);
+
+      const result = computeUpwardPromotions(index, parent, "done", (id) => findEntry(index, id));
+      expect(result).toEqual([]);
+    });
+
+    test("cap at in-progress — parent at idea, child done — promoted to in-progress", () => {
+      const parent = makeEntry({ id: "parent00001", status: "idea" });
+      const index = makeIndex([parent]);
+
+      const result = computeUpwardPromotions(index, parent, "done", (id) => findEntry(index, id));
+
+      expect(result).toHaveLength(1);
+      expect(result[0].issueId).toBe("parent00001");
+      if (result[0].event.type === "update") {
+        expect(result[0].event.content.status).toBe("in-progress");
+        expect(result[0].event.content.reason).toBe("auto-promoted to 'in-progress': child advanced to 'done'");
+      }
+    });
+
+    test("cap at in-progress — parent at idea, child closed — promoted to in-progress", () => {
+      const parent = makeEntry({ id: "parent00001", status: "idea" });
+      const index = makeIndex([parent]);
+
+      const result = computeUpwardPromotions(index, parent, "closed", (id) => findEntry(index, id));
+
+      expect(result).toHaveLength(1);
+      expect(result[0].issueId).toBe("parent00001");
+      if (result[0].event.type === "update") {
+        expect(result[0].event.content.status).toBe("in-progress");
+        expect(result[0].event.content.reason).toBe("auto-promoted to 'in-progress': child advanced to 'closed'");
+      }
+    });
+
+    test("cap at in-progress — parent at in-progress, child closed — no promotion", () => {
+      const parent = makeEntry({ id: "parent00001", status: "in-progress" });
+      const index = makeIndex([parent]);
+
+      const result = computeUpwardPromotions(index, parent, "closed", (id) => findEntry(index, id));
+      expect(result).toEqual([]);
     });
 
     test("multi-level: grandchild promotes child promotes parent", () => {
@@ -257,15 +301,15 @@ describe("Hierarchy", () => {
       const result = computeUpwardPromotions(index, parent, "done", (id) => findEntry(index, id));
 
       expect(result).toHaveLength(2);
-      // Direct parent first
+      // Direct parent first — capped at in-progress
       expect(result[0].issueId).toBe("parent00001");
       if (result[0].event.type === "update") {
-        expect(result[0].event.content.status).toBe("done");
+        expect(result[0].event.content.status).toBe("in-progress");
       }
-      // Then grandparent
+      // Then grandparent — also capped at in-progress
       expect(result[1].issueId).toBe("grandpa00001");
       if (result[1].event.type === "update") {
-        expect(result[1].event.content.status).toBe("done");
+        expect(result[1].event.content.status).toBe("in-progress");
       }
     });
 
@@ -274,8 +318,8 @@ describe("Hierarchy", () => {
       const parent = makeEntry({ id: "parent00001", status: "idea", parentId: "grandpa00001" });
       const index = makeIndex([grandparent, parent]);
 
-      // Parent is idea, grandparent is closed. Promote parent to done.
-      // Grandparent is already closed (past done), so no further promotion.
+      // Parent is idea, grandparent is closed. Promote parent to in-progress (capped).
+      // Grandparent is already closed (past in-progress), so no further promotion.
       const result = computeUpwardPromotions(index, parent, "done", (id) => findEntry(index, id));
 
       expect(result).toHaveLength(1);

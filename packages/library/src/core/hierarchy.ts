@@ -57,7 +57,8 @@ export function getClosableChildren(childEntries: IndexEntry[]): IndexEntry[] {
 }
 
 /**
- * Auto-promote parent if child's new status is past parent's status.
+ * Auto-promote parent to at most `in-progress` if child's new status is past parent's status.
+ * Parents are never auto-promoted to `done` or `closed` — those transitions must be explicit.
  * Returns update events to apply to parents (walks up recursively).
  * Each event has author: "system" and a reason field explaining the promotion.
  *
@@ -75,11 +76,16 @@ export function computeUpwardPromotions(
 ): Array<{ issueId: IssueId; event: Event }> {
   const promotions: Array<{ issueId: IssueId; event: Event }> = [];
 
+  // Cap promoted status at in-progress — parents are never auto-promoted to done/closed
+  const capIndex = STATUS_ORDER.indexOf("in-progress");
+  const childIndex = STATUS_ORDER.indexOf(childStatus);
+  const promotedStatus: IssueStatus = childIndex <= capIndex ? childStatus : "in-progress";
+
   let currentParentEntry: IndexEntry | null = parentEntry;
 
   while (currentParentEntry) {
-    // If child's status is not after parent's status, no promotion needed
-    if (!isStatusAfter(childStatus, currentParentEntry.status)) {
+    // If promoted status is not after parent's status, no promotion needed
+    if (!isStatusAfter(promotedStatus, currentParentEntry.status)) {
       break;
     }
 
@@ -89,8 +95,8 @@ export function computeUpwardPromotions(
       timestamp: now,
       author: "system",
       content: {
-        status: childStatus,
-        reason: `auto-promoted: child advanced to '${childStatus}'`,
+        status: promotedStatus,
+        reason: `auto-promoted to '${promotedStatus}': child advanced to '${childStatus}'`,
       },
     };
 
